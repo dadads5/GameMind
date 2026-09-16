@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神资讯 - 提瓦特大陆论坛</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 顶部导航栏 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+        }
+
+        .logo-text h1 {
+            font-size: 28px;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .logo-text p {
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        .nav-link.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #6a11cb, #2575fc);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #6a11cb;
+        }
+
+        /* 资讯头部 */
+        .news-header {
+            text-align: center;
+            padding: 60px 0 40px;
+        }
+
+        .news-header h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .news-header p {
+            font-size: 20px;
+            color: rgba(255,255,255,0.9);
+            max-width: 600px;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+        }
+
+        /* 资讯筛选 */
+        .news-filter {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 25px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: linear-gradient(45deg, #6a11cb, #2575fc);
+            border-color: transparent;
+        }
+
+        /* 资讯网格 */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .news-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .news-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255,255,255,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .news-image {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(45deg, #667eea, #764ba2); /* 图片加载失败时的底色 */
+            overflow: hidden; /* 隐藏超出容器的图片部分 */
+        }
+
+        /* 新增：图片自适应样式 */
+        .news-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 核心属性：保证图片覆盖区域且不变形拉伸 */
+            transition: transform 0.3s ease;
+        }
+
+        /* 可选：鼠标悬停在卡片上时，图片微微放大 */
+        .news-card:hover .news-img {
+            transform: scale(1.05);
+        }
+
+        .news-content {
+            padding: 25px;
+        }
+
+        .news-category {
+            display: inline-block;
+            padding: 5px 12px;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            color: white;
+            border-radius: 15px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+
+        .news-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .news-excerpt {
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .news-date {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .news-views {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 加载更多 */
+        .load-more {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .load-btn {
+            padding: 15px 40px;
+            background: linear-gradient(45deg, #6a11cb, #2575fc);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .load-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* 底部 */
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            margin-top: 50px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .news-header h2 {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="logo">
+            <div class="logo-img"></div>
+            <div class="logo-text">
+                <h1>提瓦特大陆</h1>
+                <p>最新原神资讯</p>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">首页</a>
+            <a href="game_forum.html" class="nav-link">论坛</a>
+            <a href="wiki.html" class="nav-link">Wiki</a>
+            <a href="news.html" class="nav-link active">资讯</a>
+        </div>
+
+        <div class="user-section" id="user-section">
+            <!-- 动态显示登录/用户信息 -->
+        </div>
+    </nav>
+
+    <!-- 资讯头部 -->
+    <section class="news-header">
+        <h2>原神最新资讯</h2>
+        <p>获取《原神》最新版本更新、活动预告、角色情报、攻略指南等第一手资讯！</p>
+
+        <!-- 资讯筛选 -->
+        <div class="news-filter">
+            <button class="filter-btn active" onclick="filterNews('all')">全部</button>
+            <button class="filter-btn" onclick="filterNews('update')">版本更新</button>
+            <button class="filter-btn" onclick="filterNews('event')">活动预告</button>
+            <button class="filter-btn" onclick="filterNews('character')">角色情报</button>
+            <button class="filter-btn" onclick="filterNews('guide')">攻略指南</button>
+            <button class="filter-btn" onclick="filterNews('official')">官方公告</button>
+        </div>
+    </section>
+
+    <!-- 资讯网格 -->
+    <section class="news-grid" id="news-grid">
+        <!-- 资讯卡片动态加载 -->
+    </section>
+
+    <!-- 加载更多 -->
+    <div class="load-more">
+        <button class="load-btn" onclick="loadMoreNews()" id="load-more-btn">加载更多资讯</button>
+    </div>
+
+    <!-- 底部 -->
+    <footer class="footer">
+        <p>© 2026 提瓦特大陆资讯站 | 资讯来源于官方公告和社区整理 | 更新时间：2026年5月</p>
+    </footer>
+</div>
+
+<script>
+    // API基础URL
+    const API_BASE_URL = '/api';
+
+    // 获取token
+    let token = localStorage.getItem('token');
+    let currentUser = null;
+    let currentPage = 1;
+    let currentFilter = 'all';
+    let isLoading = false;
+
+    // 资讯数据（已根据目录结构更新图片引用路径）
+    const newsData = [
+        {
+            id: 1,
+            title: "「月之七」版本第一期话题活动开启",
+            excerpt: "与尼可分享旅途趣事，或用留影机为杜林推荐蒙德探索地，参与赢取原石奖励！",
+            category: "event",
+            date: "2026-05-20",
+            views: 6151,
+            image: "./images/image.png"
+        },
+        {
+            id: 2,
+            title: "提瓦特委托板·杂谈篇",
+            excerpt: "留言提问游历提瓦特时遇到的困惑，或为其他旅行者答疑互助，赢取原石和周边！",
+            category: "event",
+            date: "2026-05-20",
+            views: 5067,
+            image: "./images/image (1).png"
+        },
+        {
+            id: 3,
+            title: "【网页活动】魔女尼可的茶会",
+            excerpt: "网页活动限时开启，完成页面任务必得原石及「方糖」，消耗方糖参与抽奖赢福利！",
+            category: "event",
+            date: "2026-05-20",
+            views: 16827,
+            image: "./images/image (2).png"
+        },
+        {
+            id: 4,
+            title: "「虚空劫灰往世书」剧情讨论开启",
+            excerpt: "完成魔神任务空月之歌第九幕与第十幕后，分享你的感受，参与必得社区装扮！",
+            category: "official",
+            date: "2026-05-20",
+            views: 3952,
+            image: "./images/image (3).png"
+        },
+        {
+            id: 5,
+            title: "「喧寂于心」尼可绘画征集开启",
+            excerpt: "为无言的「魔女」、弃声的「天使」尼可绘制作品，赢取周边礼包和原石奖励！",
+            category: "event",
+            date: "2026-05-11",
+            views: 328,
+            image: "./images/image (4).png"
+        },
+        {
+            id: 6,
+            title: "「稚梦归心」·布伦妮登场",
+            excerpt: "小小「魔女猎人」布伦妮登场，分享童年趣味游戏，赢取角色立牌周边！",
+            category: "character",
+            date: "2026-05-16",
+            views: 2923,
+            image: "./images/image (5).png"
+        },
+        {
+            id: 7,
+            title: "5月生日会话题活动开启",
+            excerpt: "5月伙伴生日庆典开启，在评论区为伙伴送上生日祝福，赢取周边奖品！",
+            category: "event",
+            date: "2026-05-01",
+            views: 10179,
+            image: "./images/image (6).png"
+        },
+        {
+            id: 8,
+            title: "「月之六」版本攻略征集开启",
+            excerpt: "「逢归的谶羽」版本攻略征集，包含角色攻略、任务探索、活动详解等专题赛道！",
+            category: "guide",
+            date: "2026-04-08",
+            views: 290,
+            image: "./images/image (7).png"
+        }
+    ];
+
+    // 分类标签映射
+    const categoryMap = {
+        'update': { name: '版本更新', color: '#667eea' },
+        'event': { name: '活动预告', color: '#ff6b6b' },
+        'character': { name: '角色情报', color: '#ffd700' },
+        'guide': { name: '攻略指南', color: '#00b09b' },
+        'official': { name: '官方公告', color: '#764ba2' }
+    };
+
+    // 页面加载
+    document.addEventListener('DOMContentLoaded', async function() {
+        // 检查登录状态
+        await checkLoginStatus();
+
+        // 加载资讯
+        loadNews();
+    });
+
+    // 检查登录状态
+    async function checkLoginStatus() {
+        if (!token) {
+            document.getElementById('user-section').innerHTML = '';
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    currentUser = data.data;
+                    updateUserSection();
+                } else {
+                    localStorage.removeItem('token');
+                    token = null;
+                    checkLoginStatus();
+                }
+            } else {
+                throw new Error('Token验证失败');
+            }
+        } catch (error) {
+            console.error('登录状态检查失败:', error);
+            localStorage.removeItem('token');
+            token = null;
+            checkLoginStatus();
+        }
+    }
+
+    // 更新用户区域
+    function updateUserSection() {
+        if (!currentUser) return;
+
+        document.getElementById('user-section').innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(45deg, #6a11cb, #2575fc);"></div>
+                <span style="font-size: 16px;">${currentUser.username}</span>
+            </div>
+            <button class="btn btn-secondary" onclick="navigateTo('profile.html')">个人中心</button>
+            <button class="btn" onclick="logout()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white;">退出</button>
+        `;
+    }
+
+    // 加载资讯
+    function loadNews() {
+        const container = document.getElementById('news-grid');
+
+        // 过滤数据
+        let filteredData = newsData;
+        if (currentFilter !== 'all') {
+            filteredData = newsData.filter(item => item.category === currentFilter);
+        }
+
+        // 分页
+        const pageSize = 8;
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageData = filteredData.slice(startIndex, endIndex);
+
+        // 渲染资讯
+        if (pageData.length === 0) {
+            if (currentPage === 1) {
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: rgba(255,255,255,0.7);">
+                        <p style="font-size: 20px;">暂无相关资讯</p>
+                    </div>
+                `;
+            } else {
+                document.getElementById('load-more-btn').style.display = 'none';
+            }
+            return;
+        }
+
+        let html = '';
+        pageData.forEach(news => {
+            const category = categoryMap[news.category] || { name: '资讯', color: '#667eea' };
+
+            html += `
+                <div class="news-card" onclick="viewNewsDetail(${news.id})">
+                    <div class="news-image">
+                        <img src="${news.image}" alt="${news.title}" class="news-img" onerror="this.style.display='none'">
+                    </div>
+                    <div class="news-content">
+                        <span class="news-category" style="background: ${category.color}">${category.name}</span>
+                        <h3 class="news-title">${news.title}</h3>
+                        <p class="news-excerpt">${news.excerpt}</p>
+                        <div class="news-meta">
+                            <div class="news-date">📅 ${news.date}</div>
+                            <div class="news-views">👁 ${news.views.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // 更新加载更多按钮状态
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        if (endIndex >= filteredData.length) {
+            loadMoreBtn.style.display = 'none';
+        } else {
+            loadMoreBtn.style.display = 'inline-block';
+        }
+    }
+
+    // 筛选资讯
+    function filterNews(category) {
+        // 更新按钮状态
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // 更新筛选条件
+        currentFilter = category;
+        currentPage = 1;
+
+        // 重新加载资讯
+        loadNews();
+    }
+
+    // 加载更多资讯
+    function loadMoreNews() {
+        if (isLoading) return;
+
+        isLoading = true;
+        const btn = document.getElementById('load-more-btn');
+        btn.innerHTML = '加载中...';
+        btn.disabled = true;
+
+        // 模拟加载延迟
+        setTimeout(() => {
+            currentPage++;
+            loadNews();
+
+            btn.innerHTML = '加载更多资讯';
+            btn.disabled = false;
+            isLoading = false;
+        }, 500);
+    }
+
+    // 查看资讯详情
+    function viewNewsDetail(newsId) {
+        // 这里可以链接到具体的资讯详情页
+        // window.location.href = `news_detail.html?id=${newsId}`;
+
+        // 暂时用alert模拟
+        const news = newsData.find(item => item.id === newsId);
+        if (news) {
+            alert(`查看资讯详情：\n\n${news.title}\n\n${news.excerpt}\n\n分类：${categoryMap[news.category].name}\n发布日期：${news.date}`);
+        }
+    }
+
+    // 导航功能
+    function navigateTo(page) {
+        window.location.href = page;
+    }
+
+    // 登出功能
+    async function logout() {
+        if (!token) {
+            window.location.reload();
+            return;
+        }
+
+        try {
+            await fetch(`${API_BASE_URL}/auth/logout`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (error) {
+            console.error('登出失败:', error);
+        } finally {
+            localStorage.removeItem('token');
+            token = null;
+            currentUser = null;
+            window.location.reload();
+        }
+    }
+</script>
+</body>
+</html>

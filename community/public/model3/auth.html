@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录/注册 - 提瓦特大陆论坛</title>
+    <style>
+        /* 认证页样式（保持原有结构，优化交互） */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+        .auth-container { width: 100%; max-width: 450px; }
+        .logo-section { text-align: center; margin-bottom: 30px; }
+        .logo-img { width: 100px; height: 100px; margin: 0 auto 20px; border-radius: 50%; background: linear-gradient(45deg, #ffd700, #ff6b6b); }
+        .logo-text h1 { font-size: 36px; background: linear-gradient(45deg, #ffd700, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+        .logo-text p { color: rgba(255,255,255,0.8); }
+
+        .auth-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+
+        .auth-tabs { display: flex; gap: 10px; margin-bottom: 30px; }
+        .auth-tab { flex: 1; padding: 15px; text-align: center; background: rgba(255,255,255,0.1); border: none; border-radius: 10px; color: rgba(255,255,255,0.7); font-size: 16px; cursor: pointer; transition: all 0.3s ease; }
+        .auth-tab.active { background: linear-gradient(45deg, #6a11cb, #2575fc); color: white; }
+
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; color: rgba(255,255,255,0.9); margin-bottom: 8px; font-size: 14px; }
+        .form-input { width: 100%; padding: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: white; font-size: 16px; transition: all 0.3s ease; }
+        .form-input:focus { outline: none; border-color: #6a11cb; background: rgba(255,255,255,0.15); }
+        .form-input::placeholder { color: rgba(255,255,255,0.5); }
+
+        .error-message { color: #ff6b6b; font-size: 12px; margin-top: 5px; display: none; }
+        .success-message { color: #4CAF50; font-size: 12px; margin-top: 5px; display: none; }
+
+        .form-options { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .remember-me { display: flex; align-items: center; gap: 5px; color: rgba(255,255,255,0.7); }
+        .forgot-password { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; }
+
+        .auth-btn { width: 100%; padding: 15px; background: linear-gradient(45deg, #6a11cb, #2575fc); border: none; border-radius: 10px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
+        .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .divider { text-align: center; margin: 30px 0; color: rgba(255,255,255,0.5); position: relative; }
+        .divider::before, .divider::after { content: ''; position: absolute; top: 50%; width: 45%; height: 1px; background: rgba(255,255,255,0.2); }
+        .divider::before { left: 0; } .divider::after { right: 0; }
+
+        .back-home { text-align: center; margin-top: 20px; }
+        .back-home a { color: rgba(255,255,255,0.7); text-decoration: none; }
+
+        /* 密码强度指示器 */
+        .password-strength { margin-top: 5px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        .strength-bar { height: 100%; width: 0%; transition: width 0.3s ease, background 0.3s ease; }
+        .strength-text { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 3px; }
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <div class="logo-section">
+        <div class="logo-img"></div>
+        <div class="logo-text">
+            <h1>提瓦特大陆</h1>
+            <p>欢迎回来，旅行者！</p>
+        </div>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchForm('login')">登录</button>
+            <button class="auth-tab" onclick="switchForm('register')">注册</button>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="login-form" class="auth-form active" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label>用户名</label>
+                <input type="text" class="form-input" id="login-username" placeholder="请输入用户名" required
+                       oninput="clearError('login-username-error')">
+                <div class="error-message" id="login-username-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" class="form-input" id="login-password" placeholder="请输入密码" required
+                       oninput="clearError('login-password-error')">
+                <div class="error-message" id="login-password-error"></div>
+            </div>
+
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" id="remember-me"> 记住我
+                </label>
+                <a href="#" class="forgot-password" onclick="showForgotPassword()">忘记密码？</a>
+            </div>
+
+            <button type="submit" class="auth-btn" id="login-btn">登录</button>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="register-form" class="auth-form" onsubmit="handleRegister(event)">
+            <div class="form-group">
+                <label>用户名 (3-20位字母、数字、下划线)</label>
+                <input type="text" class="form-input" id="register-username"
+                       placeholder="请输入用户名" required
+                       onblur="checkUsernameAvailability()"
+                       oninput="clearError('register-username-error')">
+                <div class="error-message" id="register-username-error"></div>
+                <div class="success-message" id="register-username-success"></div>
+            </div>
+
+            <div class="form-group">
+                <label>邮箱</label>
+                <input type="email" class="form-input" id="register-email"
+                       placeholder="请输入有效邮箱" required
+                       onblur="checkEmailAvailability()"
+                       oninput="clearError('register-email-error')">
+                <div class="error-message" id="register-email-error"></div>
+                <div class="success-message" id="register-email-success"></div>
+            </div>
+
+            <div class="form-group">
+                <label>密码 (至少6位，包含字母和数字)</label>
+                <input type="password" class="form-input" id="register-password"
+                       placeholder="请输入密码" required
+                       oninput="updatePasswordStrength(); clearError('register-password-error')">
+                <div class="password-strength">
+                    <div class="strength-bar" id="strength-bar"></div>
+                </div>
+                <div class="strength-text" id="strength-text"></div>
+                <div class="error-message" id="register-password-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label>确认密码</label>
+                <input type="password" class="form-input" id="register-confirm-password"
+                       placeholder="请再次输入密码" required
+                       oninput="checkPasswordMatch(); clearError('register-confirm-error')">
+                <div class="error-message" id="register-confirm-error"></div>
+            </div>
+
+            <button type="submit" class="auth-btn" id="register-btn">注册</button>
+        </form>
+    </div>
+
+    <div class="back-home">
+        <a href="index.html">← 返回首页</a>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = '/api';
+    const urlParams = new URLSearchParams(window.location.search);
+    const authType = urlParams.get('type') || 'login';
+    // 页面加载
+    document.addEventListener('DOMContentLoaded', function() {
+        if (authType === 'register') {
+            switchForm('register');
+        }
+        // 检查是否有重定向参数
+        const redirect = urlParams.get('redirect');
+        if (redirect) {
+            localStorage.setItem('redirectUrl', redirect);
+        }
+    });
+    // 切换表单
+    function switchForm(formType) {
+        // 切换标签
+        document.querySelectorAll('.auth-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.auth-tab')[formType === 'login' ? 0 : 1].classList.add('active');
+        // 切换表单
+        document.querySelectorAll('.auth-form').forEach(form => {
+            form.classList.remove('active');
+        });
+        document.getElementById(`${formType}-form`).classList.add('active');
+        // 清除所有错误信息
+        clearAllErrors();
+    }
+    // 登录处理
+    async function handleLogin(event) {
+        event.preventDefault();
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+        const btn = document.getElementById('login-btn');
+        // 验证输入
+        if (!username || !password) {
+            showError('login-username-error', '请输入用户名和密码');
+            return;
+        }
+        btn.disabled = true;
+        btn.textContent = '登录中...';
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+            if (data.success) {
+                // 登录成功，保存token
+                localStorage.setItem('token', data.data.token);
+                // 检查是否记住我
+                if (document.getElementById('remember-me').checked) {
+                    localStorage.setItem('rememberMe', 'true');
+                }
+                // 重定向
+                const redirectUrl = localStorage.getItem('redirectUrl') || '/';
+                localStorage.removeItem('redirectUrl');
+                // 修复：传入null作为elementId，提示内容作为message
+                showSuccess(null, '登录成功！');
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 1000);
+            } else {
+                throw new Error(data.message || '登录失败');
+            }
+        } catch (error) {
+            showError('login-password-error', error.message || '登录失败，请检查用户名和密码');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '登录';
+        }
+    }
+    // 注册处理
+    async function handleRegister(event) {
+        event.preventDefault();
+        const username = document.getElementById('register-username').value.trim();
+        const email = document.getElementById('register-email').value.trim();
+        const password = document.getElementById('register-password').value;
+        const confirmPassword = document.getElementById('register-confirm-password').value;
+        const btn = document.getElementById('register-btn');
+        // 验证输入
+        if (!validateRegisterInput(username, email, password, confirmPassword)) {
+            return;
+        }
+        btn.disabled = true;
+        btn.textContent = '注册中...';
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, email })
+            });
+            const data = await response.json();
+            if (data.success) {
+                // 传入null作为elementId，提示内容作为message
+                showSuccess(null, '注册成功！正在跳转...');
+                // 自动登录
+                setTimeout(async () => {
+                    try {
+                        const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ username, password })
+                        });
+                        const loginData = await loginResponse.json();
+                        if (loginData.success) {
+                            localStorage.setItem('token', loginData.data.token);
+                            const redirectUrl = localStorage.getItem('redirectUrl') || '/';
+                            localStorage.removeItem('redirectUrl');
+                            window.location.href = redirectUrl;
+                        } else {
+                            window.location.href = 'auth.html?type=login';
+                        }
+                    } catch (loginError) {
+                        window.location.href = 'auth.html?type=login';
+                    }
+                }, 1500);
+            } else {
+                throw new Error(data.message || '注册失败');
+            }
+        } catch (error) {
+            showError('register-confirm-error', error.message || '注册失败');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '注册';
+        }
+    }
+    // 验证注册输入
+    function validateRegisterInput(username, email, password, confirmPassword) {
+        clearAllErrors();
+        let isValid = true;
+        // 验证用户名
+        if (!username) {
+            showError('register-username-error', '用户名不能为空');
+            isValid = false;
+        } else if (username.length < 3 || username.length > 20) {
+            showError('register-username-error', '用户名长度必须在3-20位之间');
+            isValid = false;
+        } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            showError('register-username-error', '用户名只能包含字母、数字和下划线');
+            isValid = false;
+        }
+        // 验证邮箱
+        if (!email) {
+            showError('register-email-error', '邮箱不能为空');
+            isValid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showError('register-email-error', '请输入有效的邮箱地址');
+            isValid = false;
+        }
+        // 验证密码
+        if (!password) {
+            showError('register-password-error', '密码不能为空');
+            isValid = false;
+        } else if (password.length < 6) {
+            showError('register-password-error', '密码长度至少6位');
+            isValid = false;
+        } else if (!/(?=.*[A-Za-z])(?=.*\d)/.test(password)) {
+            showError('register-password-error', '密码必须包含字母和数字');
+            isValid = false;
+        }
+        // 验证确认密码
+        if (!confirmPassword) {
+            showError('register-confirm-error', '请确认密码');
+            isValid = false;
+        } else if (password !== confirmPassword) {
+            showError('register-confirm-error', '两次输入的密码不一致');
+            isValid = false;
+        }
+        return isValid;
+    }
+    // 检查用户名可用性
+    async function checkUsernameAvailability() {
+        const username = document.getElementById('register-username').value.trim();
+        if (!username || username.length < 3) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/check-username?username=${encodeURIComponent(username)}`);
+            const data = await response.json();
+            if (data.success && data.data.available) {
+                showSuccess('register-username-success', '用户名可用');
+                clearError('register-username-error');
+            } else {
+                showError('register-username-error', '用户名已存在');
+                clearSuccess('register-username-success');
+            }
+        } catch (error) {
+            console.error('检查用户名失败:', error);
+        }
+    }
+    // 检查邮箱可用性
+    async function checkEmailAvailability() {
+        const email = document.getElementById('register-email').value.trim();
+        if (!email) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(email)}`);
+            const data = await response.json();
+            if (data.success && data.data.available) {
+                showSuccess('register-email-success', '邮箱可用');
+                clearError('register-email-error');
+            } else {
+                showError('register-email-error', '邮箱已被注册');
+                clearSuccess('register-email-success');
+            }
+        } catch (error) {
+            console.error('检查邮箱失败:', error);
+        }
+    }
+    // 更新密码强度
+    function updatePasswordStrength() {
+        const password = document.getElementById('register-password').value;
+        const bar = document.getElementById('strength-bar');
+        const text = document.getElementById('strength-text');
+        if (!password) {
+            bar.style.width = '0%';
+            bar.style.background = '#ff6b6b';
+            text.textContent = '';
+            return;
+        }
+        let strength = 0;
+        if (password.length >= 6) strength += 1;
+        if (/[a-z]/.test(password)) strength += 1;
+        if (/[A-Z]/.test(password)) strength += 1;
+        if (/\d/.test(password)) strength += 1;
+        if (/[^a-zA-Z0-9]/.test(password)) strength += 1;
+        const width = (strength / 5) * 100;
+        bar.style.width = `${width}%`;
+        if (strength <= 2) {
+            bar.style.background = '#ff6b6b';
+            text.textContent = '弱';
+        } else if (strength <= 3) {
+            bar.style.background = '#ffa726';
+            text.textContent = '中';
+        } else {
+            bar.style.background = '#4CAF50';
+            text.textContent = '强';
+        }
+    }
+    // 检查密码是否匹配
+    function checkPasswordMatch() {
+        const password = document.getElementById('register-password').value;
+        const confirm = document.getElementById('register-confirm-password').value;
+        const error = document.getElementById('register-confirm-error');
+        if (confirm && password !== confirm) {
+            showError('register-confirm-error', '两次输入的密码不一致');
+        } else if (confirm) {
+            clearError('register-confirm-error');
+        }
+    }
+    // 显示错误信息
+    function showError(elementId, message) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+    }
+    // 清除错误信息
+    function clearError(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = 'none';
+        }
+    }
+    // 清除所有错误信息
+    function clearAllErrors() {
+        document.querySelectorAll('.error-message').forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+    // 显示信息
+    function showSuccess(elementId, message) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = message;
+            element.style.display = 'block';
+        } else {
+            // 如果没有指定元素，直接弹出提示信息
+            alert(message);
+        }
+    }
+    // 清除成功信息
+    function clearSuccess(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = 'none';
+        }
+    }
+    // 显示忘记密码
+    function showForgotPassword() {
+        const email = prompt('请输入您的注册邮箱：');
+        if (email) {
+            alert(`密码重置链接已发送到 ${email}，请查收邮件。`);
+        }
+    }
+</script>
+</body>
+</html>

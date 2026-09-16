@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神角色配装推荐</title>
+    <style>
+        :root {
+            --primary-color: #d4a574;
+            --bg-color: #1a1c24;
+            --card-bg: #2a2d3a;
+            --text-main: #e9e5dc;
+            --text-muted: #a8a29e;
+            --accent: #5b8def;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Microsoft YaHei", "SimHei", sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); line-height: 1.6; }
+        header {
+            background: linear-gradient(135deg, #2a2d3a 0%, #1a1c24 100%);
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 2px solid var(--primary-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        h1 { color: var(--primary-color); margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .search-box { position: relative; max-width: 500px; margin: 0 auto; }
+        .search-box input {
+            width: 100%; padding: 12px 20px; border-radius: 25px;
+            border: 2px solid var(--primary-color);
+            background: rgba(255,255,255,0.1); color: white;
+            font-size: 16px; outline: none;
+        }
+        main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .card {
+            background-color: var(--card-bg); border-radius: 10px;
+            padding: 1.5rem; cursor: pointer;
+            border: 1px solid rgba(212, 165, 116, 0.3); text-align: center;
+        }
+        .card:hover { transform: translateY(-5px); border-color: var(--primary-color); }
+        .card-icon {
+            width: 80px; height: 80px; background: var(--primary-color);
+            border-radius: 50%; margin: 0 auto 1rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: var(--bg-color);
+        }
+        .detail-view { display: none; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .btn-back {
+            background: var(--accent); color: white; border: none;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer;
+            margin-bottom: 2rem; font-size: 16px;
+        }
+        .detail-header { display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem; background: var(--card-bg); padding: 2rem; border-radius: 10px; }
+        .detail-icon { width: 120px; height: 120px; background: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--bg-color); }
+        .detail-content { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 768px) { .detail-content { grid-template-columns: 1fr 1fr; } }
+        .section-box { background: var(--card-bg); padding: 1.5rem; border-radius: 10px; border-left: 4px solid var(--primary-color); }
+        .section-box h2 { color: var(--primary-color); margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+        .list-item { margin-bottom: 1rem; }
+        .list-item strong { color: var(--accent); display: block; margin-bottom: 0.3rem; }
+    </style>
+</head>
+<body>
+<header>
+    <h1>原神角色配装推荐</h1>
+    <div style="margin-bottom: 1rem;">
+        <a href="index.html" style="color: #5b8def; text-decoration: none; font-size: 14px; font-weight: bold;">← 返回原神首页</a>
+    </div>
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索角色名 (如：菈乌玛、可莉)...">
+    </div>
+</header>
+<main id="mainContent">
+    <div id="indexPage" class="grid-container"><div class="loading">加载中...</div></div>
+    <div id="detailPage" class="detail-view">
+        <button class="btn-back" onclick="goBack()">← 返回列表</button>
+        <div class="detail-header">
+            <div class="detail-icon" id="detailIcon"></div>
+            <div>
+                <h1 id="detailName"></h1>
+                <p id="detailSubtitle"></p>
+            </div>
+        </div>
+        <div class="detail-content">
+            <div class="section-box"><h2>⚔️ 武器推荐</h2><div id="detailWeapons"></div></div>
+            <div class="section-box"><h2>🏺 圣遗物推荐</h2><div id="detailArtifacts"></div></div>
+            <div class="section-box"><h2>📊 面板推荐</h2><div id="detailStats"></div></div>
+            <div class="section-box"><h2>🌟 天赋加点</h2><div id="detailTalents"></div></div>
+        </div>
+    </div>
+</main>
+<script>
+    let characters = [];
+    const API_BASE_URL = '/api/characters';
+
+    const indexPage = document.getElementById('indexPage');
+    const detailPage = document.getElementById('detailPage');
+    const searchInput = document.getElementById('searchInput');
+
+    //读取 URL 参数
+    function getQueryParam(name) {
+        return new URLSearchParams(window.location.search).get(name);
+    }
+
+    async function loadCharacters() {
+        try {
+            const response = await fetch(API_BASE_URL);
+            if (!response.ok) throw new Error('网络错误');
+            characters = await response.json();
+            renderCards();
+        } catch (error) {
+            indexPage.innerHTML = '<p style="color:red; text-align:center; grid-column:1/-1;">数据加载失败，请检查后端服务</p>';
+        }
+    }
+
+    function renderCards(filter = '') {
+        indexPage.innerHTML = '';
+        const filtered = characters.filter(c => c.name.includes(filter));
+        if (filtered.length === 0) {
+            indexPage.innerHTML = '<p style="color:var(--text-muted); text-align:center; grid-column:1/-1;">未找到相关角色</p>';
+            return;
+        }
+        filtered.forEach(char => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.onclick = () => showDetail(char.name);
+            card.innerHTML = `
+                <div class="card-icon">${char.icon}</div>
+                <h3>${char.name}</h3>
+                <p>${char.subtitle}</p>
+            `;
+            indexPage.appendChild(card);
+        });
+    }
+
+    searchInput.addEventListener('input', e => renderCards(e.target.value.trim()));
+
+    function showDetail(name) {
+        const char = characters.find(c => c.name === name);
+        if (!char) {
+            alert('未找到该角色的配装数据');
+            goBack();
+            return;
+        }
+        document.getElementById('detailIcon').innerText = char.icon;
+        document.getElementById('detailName').innerText = char.name;
+        document.getElementById('detailSubtitle').innerText = char.subtitle;
+        document.getElementById('detailWeapons').innerHTML =
+            char.weapons.split('、').map(w => `<div class="list-item">${w}</div>`).join('');
+        document.getElementById('detailArtifacts').innerHTML =
+            char.artifacts.split('<br>').map(a => `<div class="list-item">${a}</div>`).join('');
+        document.getElementById('detailStats').innerHTML =
+            char.stats.split(' / ').map(s => {
+                const parts = s.split('+');
+                return `<div class="list-item"><strong>${parts[0]}</strong>${parts[1] || ''}</div>`;
+            }).join('');
+        document.getElementById('detailTalents').innerHTML =
+            `<div class="list-item">${char.talents}</div>`;
+        indexPage.style.display = 'none';
+        detailPage.style.display = 'block';
+        window.scrollTo(0, 0);
+    }
+
+    function goBack() {
+        detailPage.style.display = 'none';
+        indexPage.style.display = 'grid';
+    }
+
+    // ✅ 修改：页面加载时自动打开角色
+    window.onload = async function () {
+        await loadCharacters();
+        const roleName = getQueryParam('name');
+        if (roleName) {
+            showDetail(decodeURIComponent(roleName));
+        }
+    };
+</script>
+</body>
+</html>

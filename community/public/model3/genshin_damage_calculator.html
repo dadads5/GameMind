@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神伤害计算器</title>
+    <style>
+        :root {
+            --primary-bg: #1a1a2e;
+            --secondary-bg: #16213e;
+            --card-bg: #0f3460;
+            --accent: #e94560;
+            --text-light: #f1f1f1;
+            --text-dim: #a0a0b0;
+            --input-bg: #1a1a40;
+            --border-color: #e94560;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--primary-bg); color: var(--text-light); line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; color: var(--accent); margin-bottom: 30px; font-size: 2.5rem; text-shadow: 0 0 10px rgba(233, 69, 96, 0.5); }
+        .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .panel { background: var(--secondary-bg); border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border-top: 3px solid var(--accent); }
+        .panel h2 { color: var(--accent); margin-bottom: 15px; font-size: 1.2rem; border-bottom: 1px solid rgba(233, 69, 96, 0.3); padding-bottom: 5px; }
+        .form-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .form-group label { color: var(--text-dim); font-size: 0.95rem; flex: 1; }
+        .form-group input, .form-group select { background: var(--input-bg); border: 1px solid #333; color: var(--text-light); padding: 8px 12px; border-radius: 5px; width: 140px; text-align: right; outline: none; transition: border-color 0.3s; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+        .btn-calculate { display: block; width: 100%; max-width: 400px; margin: 0 auto 30px; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 2px; }
+        .btn-calculate:hover { background: #d13350; box-shadow: 0 0 20px rgba(233, 69, 96, 0.6); transform: translateY(-2px); }
+        .results { background: var(--secondary-bg); border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); border: 1px solid var(--card-bg); }
+        .results h2 { color: var(--accent); margin-bottom: 20px; text-align: center; font-size: 1.5rem; }
+        .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .result-item { background: var(--card-bg); padding: 15px; border-radius: 8px; text-align: center; }
+        .result-item .label { font-size: 0.9rem; color: var(--text-dim); margin-bottom: 5px; }
+        .result-item .value { font-size: 1.8rem; font-weight: bold; color: #ffd700; }
+        .sub-text { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div style="text-align: left; margin-bottom: 20px;">
+        <a href="index.html" style="color: #e94560; text-decoration: none; font-size: 16px; font-weight: bold;">← 返回首页</a>
+    </div>
+    <h1>原神伤害计算器</h1>
+    <div class="panels">
+        <!-- 攻击与倍率区 -->
+        <div class="panel">
+            <h2>攻击与倍率区</h2>
+            <div class="form-group">
+                <label>角色基础攻击力 (白字)</label>
+                <input type="number" id="baseAtk" value="800" step="1">
+            </div>
+            <div class="form-group">
+                <label>攻击力百分比加成 (%)</label>
+                <input type="number" id="atkPercent" value="100" step="1">
+            </div>
+            <div class="form-group">
+                <label>固定数值攻击力加成 (小攻击)</label>
+                <input type="number" id="flatAtk" value="300" step="1">
+            </div>
+            <div class="form-group">
+                <label>技能倍率 (%)</label>
+                <input type="number" id="skillMultiplier" value="200" step="1">
+            </div>
+            <div class="form-group">
+                <label>固定伤害加成 (如申鹤/云堇)</label>
+                <input type="number" id="flatDmg" value="0" step="1">
+            </div>
+        </div>
+        <!-- 增伤与暴击区 -->
+        <div class="panel">
+            <h2>增伤与暴击区</h2>
+            <div class="form-group">
+                <label>伤害加成 (%) (元素/物理/其他)</label>
+                <input type="number" id="dmgBonus" value="80" step="1">
+            </div>
+            <div class="form-group">
+                <label>暴击率 (%)</label>
+                <input type="number" id="critRate" value="70" step="1" max="100">
+            </div>
+            <div class="form-group">
+                <label>暴击伤害 (%)</label>
+                <input type="number" id="critDmg" value="180" step="1">
+            </div>
+        </div>
+        <!-- 防御与抗性区 -->
+        <div class="panel">
+            <h2>防御与抗性区</h2>
+            <div class="form-group">
+                <label>角色等级</label>
+                <input type="number" id="charLvl" value="90" step="1">
+            </div>
+            <div class="form-group">
+                <label>怪物等级</label>
+                <input type="number" id="enemyLvl" value="90" step="1">
+            </div>
+            <div class="form-group">
+                <label>怪物基础抗性 (%)</label>
+                <input type="number" id="baseRes" value="10" step="1">
+            </div>
+            <div class="form-group">
+                <label>减抗效果 (%) (如风套/钟离)</label>
+                <input type="number" id="resShred" value="0" step="1">
+            </div>
+        </div>
+        <!-- 反应区 -->
+        <div class="panel">
+            <h2>元素反应区</h2>
+            <div class="form-group">
+                <label>反应类型</label>
+                <select id="reactionType">
+                    <option value="none">无反应</option>
+                    <option value="vaporize1">蒸发 (火打水 1.5倍)</option>
+                    <option value="vaporize2">蒸发 (水打火 2.0倍)</option>
+                    <option value="melt1">融化 (冰打火 1.5倍)</option>
+                    <option value="melt2">融化 (火打冰 2.0倍)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>元素精通</label>
+                <input type="number" id="em" value="0" step="1">
+            </div>
+            <div class="form-group">
+                <label>反应伤害提高加成 (%) (如魔女4)</label>
+                <input type="number" id="reactionBonus" value="0" step="1">
+            </div>
+        </div>
+    </div>
+    <button class="btn-calculate" onclick="calculateDamage()">计算伤害</button>
+    <div class="results">
+        <h2>计算结果</h2>
+        <div class="result-grid">
+            <div class="result-item">
+                <div class="label">总攻击力</div>
+                <div class="value" id="resTotalAtk">0</div>
+            </div>
+            <div class="result-item">
+                <div class="label">未暴击伤害</div>
+                <div class="value" id="resNonCrit">0</div>
+            </div>
+            <div class="result-item">
+                <div class="label">暴击伤害</div>
+                <div class="value" id="resCrit">0</div>
+            </div>
+            <div class="result-item">
+                <div class="label">期望伤害 (平均)</div>
+                <div class="value" id="resAvg">0</div>
+                <div class="sub-text">综合暴击率计算</div>
+            </div>
+            <div class="result-item">
+                <div class="label">增幅反应后伤害</div>
+                <div class="value" id="resReaction">0</div>
+                <div class="sub-text">基于暴击伤害计算</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function getVal(id) {
+        return parseFloat(document.getElementById(id).value) || 0;
+    }
+    function fmt(num) {
+        return Math.round(num).toLocaleString();
+    }
+    function calculateDamage() {
+        // 1. 攻击区
+        const baseAtk = getVal('baseAtk');
+        const atkPercent = getVal('atkPercent') / 100;
+        const flatAtk = getVal('flatAtk');
+        const totalAtk = baseAtk * (1 + atkPercent) + flatAtk;
+        // 2. 倍率与增伤区
+        const skillMultiplier = getVal('skillMultiplier') / 100;
+        const flatDmg = getVal('flatDmg');
+        const dmgBonus = getVal('dmgBonus') / 100;
+        // 基础伤害 = (总攻击力 * 技能倍率 + 固定伤害) * (1 + 伤害加成)
+        const baseDmg = (totalAtk * skillMultiplier + flatDmg) * (1 + dmgBonus);
+        // 3. 暴击区
+        const critRate = Math.min(getVal('critRate') / 100, 1.0);
+        const critDmg = getVal('critDmg') / 100;
+        const nonCritDmg = baseDmg;
+        const critDmgVal = baseDmg * (1 + critDmg);
+        const avgDmg = baseDmg * (1 + critRate * critDmg);
+        // 4. 防御区
+        const charLvl = getVal('charLvl');
+        const enemyLvl = getVal('enemyLvl');
+        // 防御减免 = (角色等级 + 100) / [(角色等级 + 100) + (怪物等级 + 100)]
+        // 注：公式中有时写法不同，采用通用版本，若参考[1]则为 (L+100)/((L+100)+(M+200))
+        const defMultiplier = (charLvl + 100) / ((charLvl + 100) + (enemyLvl + 200));
+        // 5. 抗性区
+        const baseRes = getVal('baseRes') / 100;
+        const resShred = getVal('resShred') / 100;
+        let finalRes = baseRes - resShred;
+        let resMultiplier = 1;
+        if (finalRes < 0) {
+            resMultiplier = 1 - (finalRes / 2); // 负抗性减半
+        } else if (finalRes >= 0 && finalRes < 0.75) {
+            resMultiplier = 1 - finalRes;
+        } else {
+            resMultiplier = 1 / (1 + finalRes * 4);
+        }
+        // 应用防御与抗性
+        const finalNonCrit = nonCritDmg * defMultiplier * resMultiplier;
+        const finalCrit = critDmgVal * defMultiplier * resMultiplier;
+        const finalAvg = avgDmg * defMultiplier * resMultiplier;
+        // 6. 反应区 (增幅反应)
+        const reactionType = document.getElementById('reactionType').value;
+        let reactionMultiplier = 1;
+        if (reactionType === 'vaporize1') reactionMultiplier = 1.5;
+        else if (reactionType === 'vaporize2') reactionMultiplier = 2.0;
+        else if (reactionType === 'melt1') reactionMultiplier = 1.5;
+        else if (reactionType === 'melt2') reactionMultiplier = 2.0;
+        const em = getVal('em');
+        const reactionBonus = getVal('reactionBonus') / 100;
+        // 精通加成公式: 2.78 * EM / (EM + 1400)
+        const emBonus = 2.78 * em / (em + 1400);
+        const totalReactionBonus = reactionMultiplier * (1 + emBonus + reactionBonus);
+        const finalReactionDmg = finalCrit * totalReactionBonus;
+        // 输出结果
+        document.getElementById('resTotalAtk').innerText = fmt(totalAtk);
+        document.getElementById('resNonCrit').innerText = fmt(finalNonCrit);
+        document.getElementById('resCrit').innerText = fmt(finalCrit);
+        document.getElementById('resAvg').innerText = fmt(finalAvg);
+        document.getElementById('resReaction').innerText = reactionType !== 'none' ? fmt(finalReactionDmg) : '无反应';
+    }
+    // 初始加载计算一次
+    window.onload = calculateDamage;
+</script>
+</body>
+</html>

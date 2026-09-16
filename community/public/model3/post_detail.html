@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帖子详情 - 提瓦特大陆论坛</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 0; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .back-btn { color: white; text-decoration: none; font-size: 16px; display: flex; align-items: center; gap: 5px; }
+    .user-info { display: flex; align-items: center; gap: 15px; }
+    .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(45deg, #6a11cb, #2575fc); }
+    .post-content { background: white; border-radius: 10px; padding: 30px; margin: 30px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .post-header { border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; margin-bottom: 30px; }
+    .post-title { font-size: 32px; margin-bottom: 15px; color: #333; }
+    .post-meta { display: flex; justify-content: space-between; align-items: center; color: #666; font-size: 14px; }
+    .post-body { font-size: 16px; line-height: 1.8; color: #444; margin-bottom: 20px; }
+
+    .post-actions { margin-top: 20px; padding-top: 20px; border-top: 1px solid #f0f0f0; text-align: right; }
+    
+    /* AI智能回复按钮 */
+    .ai-reply-btn {
+        background: linear-gradient(45deg, #00d4ff, #0099ff);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 10px 20px;
+        border-radius: 20px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 15px;
+        box-shadow: 0 2px 8px rgba(0, 153, 255, 0.3);
+    }
+    .ai-reply-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 153, 255, 0.4);
+    }
+    .ai-reply-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    .ai-btn-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+    }
+
+    /* AI回复区域 */
+    .ai-reply-section {
+        background: linear-gradient(135deg, #e6f7ff 0%, #f0f8ff 100%);
+        border: 1px solid #b3e5fc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .ai-reply-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    .ai-reply-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+    }
+    .ai-reply-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #0288d1;
+    }
+    .ai-reply-content {
+        color: #333;
+        line-height: 1.8;
+        font-size: 15px;
+        padding-left: 50px;
+    }
+
+    .comments-section { background: white; border-radius: 10px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .section-title { font-size: 24px; margin-bottom: 20px; color: #333; display: flex; align-items: center; gap: 10px; }
+    .comments-count { background: #667eea; color: white; padding: 2px 8px; border-radius: 10px; font-size: 14px; }
+    .comment-item { border-bottom: 1px solid #f0f0f0; padding: 20px 0; }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .comment-author { display: flex; align-items: center; gap: 10px; }
+    .author-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(45deg, #6a11cb, #2575fc); }
+    .comment-body { color: #444; line-height: 1.6; margin: 10px 0; padding-left: 50px; }
+
+    /* 统一优化的删除按钮样式 */
+    .delete-btn {
+        background: none;
+        border: 1px solid #ff6b6b;
+        color: #ff6b6b;
+        cursor: pointer;
+        font-size: 13px;
+        padding: 5px 12px;
+        border-radius: 4px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .delete-btn:hover {
+        background: #ff6b6b;
+        color: white;
+    }
+
+    .comment-form { margin-top: 30px; }
+    .comment-textarea { width: 100%; height: 120px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 15px; resize: vertical; }
+    .comment-submit { background: linear-gradient(45deg, #667eea, #764ba2); color: white; border: none; border-radius: 25px; padding: 12px 30px; font-size: 16px; cursor: pointer; float: right; transition: opacity 0.2s; }
+    .comment-submit:hover { opacity: 0.9; }
+
+    @media (max-width: 768px) {
+        .post-title { font-size: 24px; }
+        .post-meta { flex-direction: column; gap: 10px; align-items: flex-start; }
+        .comment-body { padding-left: 0; }
+    }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="container">
+    <div class="top-bar">
+      <a href="#" class="back-btn" onclick="goBack()">← 返回论坛</a>
+      <div class="user-info" id="user-info"></div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="post-content">
+    <div class="post-header">
+      <h1 class="post-title" id="post-title">加载中...</h1>
+      <div class="post-meta">
+        <div class="post-author-info">
+          <span>作者：</span><span id="author-name">加载中...</span>
+        </div>
+        <div class="post-time" id="post-time">加载中...</div>
+      </div>
+    </div>
+    <div class="post-body" id="post-content">加载中...</div>
+
+    <!-- 删除帖子按钮 -->
+    <div class="post-actions" id="post-actions" style="display: none;">
+      <button class="delete-btn" onclick="deletePost()">🗑️ 删除帖子</button>
+    </div>
+    
+    <!-- AI智能回复按钮 -->
+    <div class="post-actions" style="text-align: right; margin-top: 15px;">
+      <button class="ai-reply-btn" onclick="getAiReply()" id="ai-reply-btn">
+        <img src="/AI.jpg" class="ai-btn-icon" alt="AI" />
+        <span id="ai-btn-text">智能回复</span>
+      </button>
+    </div>
+    
+    <!-- AI回复区域 -->
+    <div id="ai-reply-container" style="display: none;">
+      <div class="ai-reply-section">
+        <div class="ai-reply-header">
+          <img src="/AI.jpg" class="ai-reply-avatar" alt="AI" />
+          <span class="ai-reply-title">AI 智能回复</span>
+        </div>
+        <div class="ai-reply-content" id="ai-reply-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comments-section">
+    <h2 class="section-title">评论 <span class="comments-count" id="comments-count">0</span></h2>
+    <div id="comments-list"></div>
+
+    <div class="comment-form">
+      <textarea class="comment-textarea" id="comment-content" placeholder="写下你的评论..."></textarea>
+      <button class="comment-submit" onclick="submitComment()">发表评论</button>
+      <div style="clear: both;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const postId = urlParams.get('postId');
+  const gameId = urlParams.get('gameId');
+  let currentUser = null;
+  let token = localStorage.getItem('token');
+
+  document.addEventListener('DOMContentLoaded', async () => {
+      await loadUserInfo();
+      loadPostDetail();
+      loadComments();
+  });
+
+  function goBack() {
+      if (gameId) {
+          window.location.href = `game_forum.html?gameId=${gameId}`;
+      } else {
+          window.history.back();
+      }
+  }
+
+  async function loadUserInfo() {
+      if (!token) {
+          document.getElementById('user-info').innerHTML = `
+              <button style="padding: 8px 20px; background: white; color: #667eea; border: none; border-radius: 20px; cursor: pointer;"
+                      onclick="window.location.href='auth.html?type=login&redirect=${encodeURIComponent(window.location.pathname + window.location.search)}'">
+                  登录
+              </button>`;
+          return;
+      }
+      try {
+          const res = await fetch('/api/auth/me', {
+              headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) {
+              const data = await res.json();
+              currentUser = data.data || data;
+              document.getElementById('user-info').innerHTML = `
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                      <div class="user-avatar"></div>
+                      <span>${currentUser.nickname || currentUser.username}</span>
+                  </div>`;
+          }
+      } catch (e) {
+          console.error('获取用户信息失败:', e);
+      }
+  }
+
+  async function loadPostDetail() {
+    if (!postId) {
+        alert('帖子不存在');
+        goBack();
+        return;
+    }
+    try {
+        const res = await fetch(`/api/posts/${postId}`);
+        if (res.ok) {
+            const result = await res.json();
+            const post = result.data || result ;
+            displayPostDetail(post);
+        } else {
+            throw new Error('请求失败');
+        }
+    } catch (e) {
+        document.getElementById('post-title').textContent = '加载失败';
+        document.getElementById('post-content').textContent = '无法加载帖子内容';
+    }
+}
+
+  function displayPostDetail(post) {
+      document.getElementById('post-title').textContent = post.title || '无标题';
+      document.getElementById('author-name').textContent =
+          (post.author && (post.author.nickname || post.author.username)) || post.authorName || '匿名用户';
+      document.getElementById('post-time').textContent =
+          new Date(post.createdAt || Date.now()).toLocaleString();
+      document.getElementById('post-content').innerHTML = post.content || '无内容';
+
+      const currentUserId = currentUser?.id || currentUser?.userId || currentUser?.user_id;
+      if (currentUserId && Number(post.userId) === Number(currentUserId)) {
+          document.getElementById('post-actions').style.display = 'block';
+      }
+  }
+
+  async function loadComments() {
+    if (!postId) return;
+    try {
+        const response = await fetch(
+            `/api/comments/post/${postId}`
+        );
+
+        if (!response.ok) {
+            throw new Error('请求失败');
+        }
+
+        const result = await response.json();
+        const comments = result.data || result;
+
+        displayComments(comments);
+    } catch (error) {
+        console.error('加载评论失败:', error);
+    }
+}
+
+  function displayComments(comments) {
+      const container = document.getElementById('comments-list');
+      const countEl = document.getElementById('comments-count');
+
+      if (!comments || comments.length === 0) {
+          container.innerHTML = `<div style="text-align:center; padding:30px; color:#666;">暂无评论</div>`;
+          countEl.textContent = '0';
+          return;
+      }
+
+      countEl.textContent = comments.length;
+      let html = '';
+
+      const currentUserId = currentUser?.id || currentUser?.userId || currentUser?.user_id;
+
+      comments.forEach(c => {
+          const safeContent = c.content
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/\n/g, '<br>');
+
+          const isAuthor = currentUserId && Number(c.userId) === Number(currentUserId);
+
+          html += `
+              <div class="comment-item">
+                  <div class="comment-header">
+                      <div class="comment-author">
+                          <div class="author-avatar"></div>
+                          <div>
+                              <strong>${c.authorName || '匿名用户'}</strong>
+                              <div style="font-size:12px;color:#666;">
+                                  ${new Date(c.createdAt || Date.now()).toLocaleString()}
+                              </div>
+                          </div>
+                      </div>
+                      ${isAuthor ? `<button class="delete-btn" onclick="deleteComment(${c.id})">🗑️ 删除评论</button>` : ''}
+                  </div>
+                  <div class="comment-body">${safeContent}</div>
+              </div>`;
+      });
+
+      container.innerHTML = html;
+  }
+
+  async function submitComment() {
+      if (!currentUser) {
+          alert('请先登录');
+          return;
+      }
+      const content = document.getElementById('comment-content').value.trim();
+      if (!content) { alert('请输入评论内容'); return; }
+
+      try {
+          const res = await fetch('/api/comments', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                  postId: Number(postId),
+                  content,
+                  userId: currentUser.id || currentUser.userId || currentUser.user_id
+              })
+          });
+          if (res.ok) {
+              document.getElementById('comment-content').value = '';
+              loadComments();
+          }
+      } catch (e) {
+          alert('发表评论失败');
+      }
+  }
+
+  /* ===== 删除帖子===== */
+  async function deletePost() {
+      if (!confirm('确定要删除这篇帖子吗？删除后将无法恢复！')) return;
+      try {
+          const res = await fetch(`/api/posts/${postId}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': 'Bearer ' + token }
+          });
+          const result = await res.json();
+          if (result.success) {
+              alert('帖子已成功删除');
+              goBack();
+          } else {
+              alert('删除失败：' + result.message);
+          }
+      } catch (e) {
+          alert('删除失败，请稍后重试');
+      }
+  }
+
+  /* ===== 删除评论（联动 CommentController） ===== */
+  async function deleteComment(commentId) {
+      if (!confirm('确定要删除这条评论吗？')) return;
+      try {
+          const res = await fetch(`/api/comments/${commentId}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (res.ok) {
+              loadComments();
+          }
+      } catch (e) {
+          alert('删除评论失败');
+      }
+  }
+
+  /* ===== AI智能回复 ===== */
+  async function getAiReply() {
+      const postContent = document.getElementById('post-content').textContent || document.getElementById('post-content').innerHTML;
+      if (!postContent || postContent.trim() === '' || postContent.trim() === '加载中...') {
+          alert('请等待帖子内容加载完成');
+          return;
+      }
+
+      const btn = document.getElementById('ai-reply-btn');
+      const btnText = document.getElementById('ai-btn-text');
+      const container = document.getElementById('ai-reply-container');
+      const content = document.getElementById('ai-reply-content');
+
+      btn.disabled = true;
+      btnText.textContent = '思考中...';
+      container.style.display = 'none';
+
+      try {
+          const res = await fetch('/api/ai/ask', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                  question: `请对以下帖子内容进行智能回复：\n\n${postContent}`
+              })
+          });
+
+          const result = await res.json();
+          
+          if (result.code === 200 && result.data) {
+              content.textContent = result.data;
+              container.style.display = 'block';
+          } else {
+              content.textContent = 'AI回复失败：' + (result.message || '未知错误');
+              container.style.display = 'block';
+          }
+      } catch (e) {
+          console.error('获取AI回复失败:', e);
+          content.textContent = '获取AI回复失败，请稍后重试';
+          container.style.display = 'block';
+      } finally {
+          btn.disabled = false;
+          btnText.textContent = '智能回复';
+      }
+  }
+</script>
+</body>
+</html>

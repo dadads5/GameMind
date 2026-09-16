@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人中心 - 提瓦特大陆论坛</title>
+  <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Microsoft YaHei', sans-serif;
+        background: #f5f5f5;
+        color: #333;
+    }
+
+    /* 头部 */
+    .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px 0;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .back-btn {
+        color: white;
+        text-decoration: none;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* 个人中心内容 */
+    .profile-container {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 30px;
+        padding: 30px 0;
+    }
+
+    /* 左侧个人信息 */
+    .profile-sidebar {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .user-avatar-large {
+        width: 150px;
+        height: 150px;
+        margin: 0 auto 20px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #6a11cb, #2575fc);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 50px;
+        font-weight: bold;
+    }
+
+    .user-info h2 {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .user-stats {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 0;
+    }
+
+    .stat-item {
+        text-align: center;
+    }
+
+    .stat-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #666;
+    }
+
+    /* 标签 */
+    .user-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0;
+    }
+
+    .tag {
+        background: linear-gradient(45deg, #6a11cb, #2575fc);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+    }
+
+    /* 主内容区 */
+    .profile-main {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* 卡片样式 */
+    .card {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .card-title {
+        font-size: 20px;
+        color: #333;
+    }
+
+    /* 帖子列表 */
+    .my-posts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .post-item-small {
+        padding: 15px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .post-item-small:hover {
+        border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    }
+
+    .post-title-small {
+        font-size: 16px;
+        color: #333;
+        margin-bottom: 5px;
+        cursor: pointer;
+    }
+
+    .post-meta-small {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #666;
+    }
+
+    /* 设置表单 */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    /* 按钮样式 */
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .btn-primary {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-logout {
+        background: #6c757d;
+        color: white;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .btn-secondary {
+        background: #f8f9fa;
+        color: #333;
+        border: 1px solid #ddd;
+    }
+
+    /* 消息提示 */
+    .message {
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        display: none;
+    }
+
+    .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    /* 加载动画 */
+    .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* 空状态 */
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+
+    .empty-state i {
+        font-size: 50px;
+        color: #ddd;
+        margin-bottom: 15px;
+    }
+
+    /* 响应式 */
+    @media (max-width: 768px) {
+        .profile-container {
+            grid-template-columns: 1fr;
+        }
+
+        .top-bar {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+    }
+  </style>
+</head>
+<body>
+<!-- 头部 -->
+<header class="header">
+  <div class="container">
+    <div class="top-bar">
+      <a href="index.html" class="back-btn">← 返回首页</a>
+      <h1>个人中心</h1>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="profile-container">
+    <!-- 左侧个人信息 -->
+    <aside class="profile-sidebar">
+      <div class="user-avatar-large" id="user-avatar">
+        <!-- 头像首字母 -->
+      </div>
+      <div class="user-info">
+        <h2 id="username">加载中...</h2>
+        <p style="text-align: center; color: #666; margin-bottom: 20px;" id="email">加载中...</p>
+      </div>
+
+      <div class="user-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="posts-count">0</div>
+          <div class="stat-label">发布帖子</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="comments-count">0</div>
+          <div class="stat-label">发表评论</div>
+        </div>
+      </div>
+
+      <div class="user-tags" id="user-tags">
+        <!-- 用户标签动态加载 -->
+      </div>
+
+      <div class="message" id="sidebar-message"></div>
+
+      <button class="btn btn-logout" onclick="logout()" id="logout-btn">退出登录</button>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="profile-main">
+      <!-- 消息提示 -->
+      <div class="message" id="main-message"></div>
+
+      <!-- 我的帖子 -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">我的帖子</h3>
+          <button class="btn btn-secondary" onclick="refreshPosts()" id="refresh-posts-btn">
+            刷新
+          </button>
+        </div>
+        <div class="my-posts-list" id="my-posts-list">
+          <!-- 帖子动态加载 -->
+          <div class="empty-state" id="posts-empty-state">
+            <div>📝</div>
+            <p>暂无发帖记录</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 我的评论 -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">我的评论</h3>
+        </div>
+        <div class="my-posts-list" id="my-comments-list">
+          <!-- 评论动态加载 -->
+          <div class="empty-state" id="comments-empty-state">
+            <div>💬</div>
+            <p>暂无评论记录</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 账户设置 -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">账户设置</h3>
+        </div>
+        <form id="profile-form" onsubmit="updateProfile(event)">
+          <div class="message" id="form-message"></div>
+
+          <div class="form-group">
+            <label class="form-label">用户名</label>
+            <input type="text" class="form-input" id="profile-username" disabled>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">邮箱</label>
+            <input type="email" class="form-input" id="profile-email"
+                   placeholder="请输入新邮箱" oninput="clearFormMessage()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">新密码</label>
+            <input type="password" class="form-input" id="profile-password"
+                   placeholder="留空则不修改" oninput="checkPasswordMatch()">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">确认新密码</label>
+            <input type="password" class="form-input" id="profile-password-confirm"
+                   placeholder="请再次输入密码" oninput="checkPasswordMatch()">
+          </div>
+
+          <div class="password-strength" id="password-strength" style="margin-bottom: 20px;">
+            <div class="strength-bar" id="strength-bar" style="height: 5px; background: #eee; border-radius: 3px;">
+              <div id="strength-fill" style="height: 100%; width: 0%; border-radius: 3px; transition: width 0.3s, background 0.3s;"></div>
+            </div>
+            <div class="strength-text" id="strength-text" style="font-size: 12px; color: #666; margin-top: 5px;"></div>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary" id="save-btn">保存更改</button>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">重置</button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  const API_BASE_URL = '/api';
+  let token = localStorage.getItem('token');
+  let currentUser = null;
+  let originalUserData = null;
+  document.addEventListener('DOMContentLoaded', async function() {
+      if (!token) {
+          showMessage('main-message', '请先登录！', 'error');
+          setTimeout(() => { window.location.href = 'auth.html?type=login'; }, 1500);
+          return;
+      }
+      await loadUserInfo();
+  });
+  // 加载用户信息
+  async function loadUserInfo() {
+      try {
+          showLoading(true);
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!response.ok) {
+              if (response.status === 401) throw new Error('登录已过期，请重新登录');
+              throw new Error('获取用户信息失败');
+          }
+          const data = await response.json();
+          const user = data.data || data;
+          if (user && user.username) {
+              currentUser = user;
+              originalUserData = { ...currentUser };
+              displayUserInfo();
+              await loadUserStats();
+              await loadUserPosts();
+          } else {
+              throw new Error(data.message || '获取用户信息失败');
+          }
+      } catch (error) {
+          console.error('加载用户信息失败:', error);
+          showMessage('main-message', error.message, 'error');
+          if (error.message.includes('登录')) {
+              setTimeout(() => {
+                  localStorage.removeItem('token');
+                  window.location.href = 'auth.html?type=login';
+              }, 2000);
+          }
+      } finally {
+          showLoading(false);
+      }
+  }
+  // 显示用户信息
+  function displayUserInfo() {
+      if (!currentUser) return;
+      document.getElementById('username').textContent = currentUser.nickname || currentUser.username;
+      document.getElementById('profile-username').value = currentUser.username;
+      document.getElementById('email').textContent = currentUser.email || '未设置';
+      document.getElementById('profile-email').value = currentUser.email || '';
+      const avatar = document.getElementById('user-avatar');
+      const firstChar = (currentUser.nickname || currentUser.username).charAt(0).toUpperCase();
+      avatar.textContent = firstChar;
+      const colors = [
+          'linear-gradient(45deg, #6a11cb, #2575fc)', 'linear-gradient(45deg, #ff6b6b, #ffd700)',
+          'linear-gradient(45deg, #00b09b, #96c93d)', 'linear-gradient(45deg, #ff416c, #ff4b2b)',
+          'linear-gradient(45deg, #834d9b, #d04ed6)', 'linear-gradient(45deg, #1d976c, #93f9b9)'
+      ];
+      avatar.style.background = colors[firstChar.charCodeAt(0) % colors.length];
+      updateUserTags();
+  }
+  // 更新用户标签
+  function updateUserTags() {
+      const tagsContainer = document.getElementById('user-tags');
+      tagsContainer.innerHTML = '';
+      if (!currentUser) return;
+      const tags = [];
+      if (currentUser.createdAt) {
+          const diffDays = Math.floor((new Date() - new Date(currentUser.createdAt)) / (1000 * 60 * 60 * 24));
+          if (diffDays < 7) tags.push('新人玩家');
+          else if (diffDays > 365) tags.push('资深玩家');
+      }
+      tags.push('原神玩家');
+      tags.forEach(tag => {
+          const tagElement = document.createElement('span');
+          tagElement.className = 'tag';
+          tagElement.textContent = tag;
+          tagsContainer.appendChild(tagElement);
+      });
+  }
+  // 加载用户统计
+  async function loadUserStats() {
+      try {
+          const postsResponse = await fetch(`${API_BASE_URL}/posts/user/${currentUser.id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (postsResponse.ok) {
+              const resData = await postsResponse.json();
+              // 兼容分页对象 {list: [], total: x} 或 普通数组 []
+              const postsList = resData.list || resData.data || resData;
+              const postsCount = resData.total || (Array.isArray(postsList) ? postsList.length : 0);
+              document.getElementById('posts-count').textContent = postsCount;
+          }
+          const commentsResponse = await fetch(`${API_BASE_URL}/comments/user/${currentUser.id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (commentsResponse.ok) {
+              const resData = await commentsResponse.json();
+              const commentsList = resData.list || resData.data || resData;
+              const commentsCount = resData.total || (Array.isArray(commentsList) ? commentsList.length : 0);
+              document.getElementById('comments-count').textContent = commentsCount;
+          }
+      } catch (error) {
+          console.error('加载用户统计失败:', error);
+      }
+  }
+  // 加载用户帖子
+  async function loadUserPosts() {
+      try {
+          const postsContainer = document.getElementById('my-posts-list');
+          const emptyState = document.getElementById('posts-empty-state');
+          const response = await fetch(`${API_BASE_URL}/posts/user/${currentUser.id}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (response.ok) {
+              const resData = await response.json();
+              // 兼容分页对象
+              const posts = resData.list || resData.data || resData;
+              if (!posts || !Array.isArray(posts) || posts.length === 0) {
+                  emptyState.style.display = 'block';
+                  return;
+              }
+              emptyState.style.display = 'none';
+              let html = '';
+              posts.forEach(post => {
+                  const date = new Date(post.createdAt || Date.now()).toLocaleDateString();
+                  html += `
+                      <div class="post-item-small" onclick="viewPost(${post.id}, ${post.gameId || ''})">
+                          <div class="post-title-small">${post.title || '无标题'}</div>
+                          <div class="post-meta-small">
+                              <span>${post.gameName || '未知分区'}</span>
+                              <span>${date}</span>
+                          </div>
+                      </div>
+                  `;
+              });
+              postsContainer.innerHTML = html;
+          } else {
+              emptyState.style.display = 'block';
+          }
+      } catch (error) {
+          console.error('加载用户帖子失败:', error);
+          document.getElementById('posts-empty-state').style.display = 'block';
+      }
+  }
+  // 查看帖
+  function viewPost(postId, gameId) {
+      if (gameId) {
+          window.location.href = `post_detail.html?postId=${postId}&gameId=${gameId}`;
+      } else {
+          window.location.href = `post_detail.html?postId=${postId}`;
+      }
+  }
+  // 刷新帖子
+  async function refreshPosts() {
+      const btn = document.getElementById('refresh-posts-btn');
+      btn.innerHTML = '<div class="loading"></div>';
+      btn.disabled = true;
+      await loadUserPosts();
+      await loadUserStats();
+      btn.innerHTML = '刷新';
+      btn.disabled = false;
+      showMessage('sidebar-message', '刷新成功！', 'success');
+      setTimeout(() => clearMessage('sidebar-message'), 2000);
+  }
+  // 更新个人资料
+  async function updateProfile(event) {
+      event.preventDefault();
+      const saveBtn = document.getElementById('save-btn');
+      const originalText = saveBtn.textContent;
+      const email = document.getElementById('profile-email').value.trim();
+      const password = document.getElementById('profile-password').value;
+      const confirmPassword = document.getElementById('profile-password-confirm').value;
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showMessage('form-message', '请输入有效的邮箱地址', 'error'); return;
+      }
+      if (password) {
+          if (password.length < 6) { showMessage('form-message', '密码长度至少6位', 'error'); return; }
+          if (!/(?=.*[A-Za-z])(?=.*\d)/.test(password)) { showMessage('form-message', '密码必须包含字母和数字', 'error'); return; }
+          if (password !== confirmPassword) { showMessage('form-message', '两次输入的密码不一致', 'error'); return; }
+      }
+      const updateData = {};
+      if (email && email !== originalUserData.email) updateData.email = email;
+      if (password) updateData.password = password;
+      if (Object.keys(updateData).length === 0) {
+          showMessage('form-message', '没有需要更新的信息', 'error'); return;
+      }
+      saveBtn.innerHTML = '<div class="loading"></div>';
+      saveBtn.disabled = true;
+      try {
+          const response = await fetch(`${API_BASE_URL}/auth/update`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(updateData)
+          });
+          const data = await response.json();
+          const res = data.data || data;
+          if (response.ok) {
+              showMessage('form-message', '更新成功！', 'success');
+              if (updateData.email) { currentUser.email = updateData.email; originalUserData.email = updateData.email; }
+              displayUserInfo();
+              document.getElementById('profile-password').value = '';
+              document.getElementById('profile-password-confirm').value = '';
+              document.getElementById('strength-fill').style.width = '0%';
+              document.getElementById('strength-text').textContent = '';
+          } else {
+              throw new Error(data.message || '更新失败');
+          }
+      } catch (error) {
+          console.error('更新个人资料失败:', error);
+          showMessage('form-message', error.message || '更新失败', 'error');
+      } finally {
+          saveBtn.innerHTML = originalText;
+          saveBtn.disabled = false;
+      }
+  }
+  function checkPasswordMatch() {
+      const password = document.getElementById('profile-password').value;
+      const confirm = document.getElementById('profile-password-confirm').value;
+      document.getElementById('profile-password-confirm').style.borderColor = (password && confirm && password !== confirm) ? '#dc3545' : '#ddd';
+      updatePasswordStrength();
+  }
+  function updatePasswordStrength() {
+      const password = document.getElementById('profile-password').value;
+      const bar = document.getElementById('strength-fill');
+      const text = document.getElementById('strength-text');
+      if (!password) { bar.style.width = '0%'; text.textContent = ''; return; }
+      let strength = 0;
+      if (password.length >= 6) strength += 1;
+      if (/[a-z]/.test(password)) strength += 1;
+      if (/[A-Z]/.test(password)) strength += 1;
+      if (/\d/.test(password)) strength += 1;
+      if (/[^a-zA-Z0-9]/.test(password)) strength += 1;
+      bar.style.width = `${(strength / 5) * 100}%`;
+      if (strength <= 2) { bar.style.background = '#dc3545'; text.textContent = '弱'; }
+      else if (strength <= 3) { bar.style.background = '#ffc107'; text.textContent = '中'; }
+      else { bar.style.background = '#28a745'; text.textContent = '强'; }
+  }
+  function resetForm() {
+      document.getElementById('profile-email').value = originalUserData.email || '';
+      document.getElementById('profile-password').value = '';
+      document.getElementById('profile-password-confirm').value = '';
+      clearMessage('form-message');
+      document.getElementById('strength-fill').style.width = '0%';
+      document.getElementById('strength-text').textContent = '';
+  }
+  function clearFormMessage() { clearMessage('form-message'); }
+  async function logout() {
+      const btn = document.getElementById('logout-btn');
+      btn.innerHTML = '<div class="loading"></div>';
+      btn.disabled = true;
+      try { await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } catch (error) {}
+      finally { localStorage.removeItem('token'); window.location.href = 'index.html'; }
+  }
+  function showMessage(elementId, message, type) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      element.textContent = message;
+      element.className = `message ${type}`;
+      element.style.display = 'block';
+      if (type === 'error') setTimeout(() => { element.style.display = 'none'; }, 5000);
+  }
+  function clearMessage(elementId) { const element = document.getElementById(elementId); if (element) element.style.display = 'none'; }
+  function showLoading(show) {
+      const elements = [document.getElementById('username'), document.getElementById('email')];
+      elements.forEach(element => {
+          if (element) {
+              if (show) element.innerHTML = '<div class="loading"></div>';
+              else if (element.textContent === '<div class="loading"></div>') element.textContent = '加载中...';
+          }
+      });
+  }
+</script>
+</body>
+</html>

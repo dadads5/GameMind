@@ -1,0 +1,60 @@
+:root {
+    --primary-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    --accent-gradient: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    --gold-gradient: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 50%, #f39c12 100%);
+    --cryo-blue: #74b9ff;
+    --pyro-red: #ff6b6b;
+    --hydro-cyan: #00cec9;
+    --geo-yellow: #fdcb6e;
+    --electro-purple: #a29bfe;
+    --dendro-green: #00b894;
+    --anemo-gray: #636e72;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { 
+    font-family: 'Noto Sans SC', sans-serif; 
+    background: var(--primary-gradient);
+    min-height: 100vh; 
+    color: white;
+    overflow-x: hidden;
+}
+
+.container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
+
+/* 星空背景 */
+.stars-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(2px 2px at 160px 120px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 230px 80px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 300px 150px, rgba(255,255,255,0.2), transparent);
+    background-size: 350px 200px;
+    animation: twinkle 5s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* 导航栏 */
+.navbar { 
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提瓦特大陆论坛 - 原神玩家聚集地</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="logo" onclick="navigateTo('index.html')">
+            <img src="./images/logo.png" class="logo-img" alt="原神">
+            <div class="logo-text">
+                <h1>提瓦特大陆</h1>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="index.html" class="nav-link active">首页</a>
+            <a href="game_forum.html" class="nav-link">论坛</a>
+            <a href="https://baike.mihoyo.com/ys/obc/" class="nav-link">Wiki</a>
+            <a href="news.html" class="nav-link">资讯</a>
+            <a href="character_build.html" class="nav-link">配装</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h2>欢迎来到 <span class="hero-title-highlight">提瓦特</span></h2>
+            <p>这里是《原神》玩家的聚集地，分享你的冒险故事，结识新的伙伴，一起探索这个奇妙的世界！</p>
+            <div class="hero-btn-group">
+                <button class="btn btn-primary hero-btn" onclick="navigateTo('game_forum.html')">进入论坛</button>
+                <button class="btn btn-secondary hero-btn" onclick="navigateTo('character_build.html')">角色配装</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-section">
+        <div class="container">
+            <h3 class="section-title">🔥 热门功能</h3>
+            <div class="features-grid">
+                <div class="feature-card" onclick="navigateTo('game_forum.html')">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #6a11cb, #2575fc);">💬</div>
+                    <h4>游戏论坛</h4>
+                    <p>分享攻略、讨论版本更新、发布冒险心得</p>
+                </div>
+                <div class="feature-card" onclick="navigateTo('https://baike.mihoyo.com/ys/obc/')">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #00b09b, #96c93d);">📖</div>
+                    <h4>原神Wiki</h4>
+                    <p>全面角色图鉴、装备数据库、任务攻略</p>
+                </div>
+                <div class="feature-card" onclick="navigateTo('news.html')">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #ff6b6b, #ffd700);">📰</div>
+                    <h4>最新资讯</h4>
+                    <p>获取版本消息、活动预告、角色情报</p>
+                </div>
+                <div class="feature-card" onclick="navigateTo('genshin_damage_calculator.html')">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #ff416c, #ff4b2b);">🧮</div>
+                    <h4>伤害计算器</h4>
+                    <p>计算角色伤害、圣遗物搭配收益</p>
+                </div>
+                <div class="feature-card" onclick="navigateTo('gacha simulator.html')">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #834d9b, #d04ed6);">🎴</div>
+                    <h4>抽卡模拟器</h4>
+                    <p>体验抽卡乐趣，模拟UP池抽取</p>
+                </div>
+                <div class="feature-card" onclick="navigateTo('character_build.html')">
+                    <div class="feature-icon" style="background: linear-gradient(135deg, #1d976c, #93f9b9);">⚔️</div>
+                    <h4>角色配装</h4>
+                    <p>查看热门角色配队方案、武器推荐</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-section">
+        <div class="container">
+            <h3 class="section-title">📊 社区数据</h3>
+            <div class="stats-grid" id="stats-grid"></div>
+        </div>
+    </section>
+
+    <section class="characters-section">
+        <div class="container">
+            <h3 class="section-title">🌟 热门角色推荐</h3>
+            <div class="characters-grid" id="characters-grid"></div>
+        </div>
+    </section>
+
+    <section class="quick-actions">
+        <div class="container">
+            <div class="actions-grid">
+                <div class="action-card" onclick="navigateTo('game_forum.html')">
+                    <div class="action-icon">📝</div>
+                    <div class="action-name">发帖讨论</div>
+                </div>
+                <div class="action-card" onclick="navigateTo('gacha simulator.html')">
+                    <div class="action-icon">🎲</div>
+                    <div class="action-name">抽卡模拟</div>
+                </div>
+                <div class="action-card" onclick="navigateTo('genshin_damage_calculator.html')">
+                    <div class="action-icon">⚡</div>
+                    <div class="action-name">伤害计算</div>
+                </div>
+                <div class="action-card" onclick="navigateTo('character_build.html')">
+                    <div class="action-icon">🎯</div>
+                    <div class="action-name">配装查询</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-links">
+                <a href="#" class="footer-link">关于我们</a>
+                <a href="#" class="footer-link">用户协议</a>
+                <a href="#" class="footer-link">隐私政策</a>
+                <a href="#" class="footer-link">联系我们</a>
+            </div>
+            <div class="footer-copyright">
+                © 2026 提瓦特大陆论坛 | 本论坛与miHoYo无关
+            </div>
+        </div>
+    </footer>
+
+    <script src="./js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>原神祈愿模拟器</title>
+  <style>
+    :root {
+        --bg-color: #0b0d17;
+        --panel-bg: #151a2e;
+        --primary-gold: #ffd054;
+        --primary-purple: #a256e1;
+        --text-light: #eaeaea;
+        --text-dim: #8e8e9a;
+        --btn-wish: #5d3e9e;
+        --btn-wish-hover: #7b58c4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Microsoft YaHei', sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-light); min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+    .header { width: 100%; padding: 15px; background: rgba(0,0,0,0.5); display: flex; justify-content: center; gap: 10px; border-bottom: 1px solid #333; flex-wrap: wrap; }
+    .tab-btn { background: transparent; color: var(--text-dim); border: 1px solid #444; padding: 8px 15px; border-radius: 20px; cursor: pointer; transition: all 0.3s; font-size: 0.9rem; }
+    .tab-btn.active { background: var(--btn-wish); color: white; border-color: var(--btn-wish); }
+    .main-container { width: 100%; max-width: 1000px; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    .banner-display { width: 100%; height: 250px; background: linear-gradient(135deg, #1a1f35 0%, #2a1f45 100%); border-radius: 10px; display: flex; align-items: center; justify-content: space-around; margin-bottom: 20px; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.5); overflow: hidden; }
+    .banner-info { z-index: 2; text-align: left; padding-left: 40px; }
+    .banner-title { font-size: 1.8rem; color: var(--primary-gold); text-shadow: 0 0 10px rgba(255,208,84,0.5); margin-bottom: 10px; }
+    .banner-sub { font-size: 1rem; color: var(--text-dim); }
+    .banner-bg-icon { position: absolute; right: -20px; bottom: -20px; font-size: 10rem; opacity: 0.1; transform: rotate(-15deg); }
+    .stats-bar { width: 100%; display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 0.9rem; color: var(--text-dim); background: var(--panel-bg); padding: 10px 20px; border-radius: 5px; flex-wrap: wrap; gap: 10px; }
+    .pity-text span { color: var(--primary-gold); font-weight: bold; }
+    .controls { display: flex; gap: 20px; margin-bottom: 30px; }
+    .wish-btn { padding: 12px 30px; font-size: 1.1rem; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+    .wish-btn.x1 { background: var(--btn-wish); color: white; }
+    .wish-btn.x10 { background: var(--primary-gold); color: #111; }
+    .wish-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    /* 结果展示区 */
+    .results-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+    .results-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; max-width: 900px; padding: 20px; }
+    .result-card { width: 90px; height: 120px; border-radius: 6px; display: flex; flex-direction: column; justify-content: center; align-items: center; animation: popIn 0.3s ease-out backwards; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    .result-card.star-5 { background: linear-gradient(to bottom, #ffd054, #b8860b); border: 2px solid #fff; }
+    .result-card.star-4 { background: linear-gradient(to bottom, #a256e1, #6a1b9a); border: 2px solid #e0b0ff; }
+    .result-card.star-3 { background: linear-gradient(to bottom, #3a4ca0, #1a2359); border: 1px solid #5c6bc0; }
+    .card-name { font-size: 0.75rem; margin-top: 8px; text-align: center; text-shadow: 1px 1px 2px black; }
+    .card-star { font-size: 0.6rem; color: #ffd054; }
+    .close-btn { margin-top: 30px; padding: 10px 40px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; cursor: pointer; font-size: 1rem; }
+    .close-btn:hover { background: #444; }
+    @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    /* 历史记录 */
+    .history-panel { width: 100%; background: var(--panel-bg); border-radius: 10px; padding: 20px; margin-top: 20px; }
+    .history-title { color: var(--primary-gold); border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+    .history-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #222; font-size: 0.9rem; }
+    .hist-star-5 { color: #ffd054; font-weight: bold; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <button class="tab-btn" onclick="goBack()" style="background: rgba(255,255,255,0.1); color: white;">← 返回首页</button>
+  <button class="tab-btn active" onclick="switchBanner('char1')">角色活动祈愿-1</button>
+  <button class="tab-btn" onclick="switchBanner('char2')">角色活动祈愿-2</button>
+  <button class="tab-btn" onclick="switchBanner('weapon')">武器活动祈愿</button>
+  <button class="tab-btn" onclick="switchBanner('standard')">常驻祈愿</button>
+</div>
+<div class="main-container">
+  <div class="banner-display" id="bannerDisplay">
+    <div class="banner-info">
+      <div class="banner-title" id="bannerTitle">杯装之诗</div>
+      <div class="banner-sub" id="bannerSub">UP角色: 玛薇卡</div>
+      <div class="banner-sub" style="font-size:0.8rem; margin-top:5px;" id="bannerSub4">UP四星: 卡齐娜 / 柯莱 / 班尼特</div>
+    </div>
+    <div class="banner-bg-icon">⚔️</div>
+  </div>
+  <div class="stats-bar">
+    <div class="pity-text">距5星保底: <span id="pity5Count">90</span> 抽</div>
+    <div class="pity-text">距4星保底: <span id="pity4Count">10</span> 抽</div>
+    <div class="pity-text">大保底: <span id="guaranteeStatus">否</span></div>
+    <div class="pity-text">总抽数: <span id="totalPulls">0</span></div>
+  </div>
+  <div class="controls">
+    <button class="wish-btn x1" onclick="doWish(1)">祈愿×1</button>
+    <button class="wish-btn x10" onclick="doWish(10)">祈愿×10</button>
+  </div>
+  <div class="history-panel">
+    <h3 class="history-title">5星获取记录</h3>
+    <div id="historyList" style="max-height: 200px; overflow-y: auto;">
+      <div style="color:var(--text-dim); text-align:center; padding:10px;">暂无记录</div>
+    </div>
+  </div>
+</div>
+<!-- 弹窗遮罩 -->
+<div class="results-overlay" id="resultsOverlay">
+  <div class="results-container" id="resultsContainer"></div>
+  <button class="close-btn" onclick="closeResults()">确认</button>
+</div>
+<script>
+  /**
+   * 【持续更新区】修改下方数据即可更新卡池
+   */
+  const POOLS = {
+      char1: {
+          name: "喧寂于心",
+          up5: ["尼可"],
+          up4: ["布伦妮", "雷泽", "菲谢尔"],
+          type: "character"
+      },
+      char2: {
+          name: "不熄灭的火",
+          up5: ["杜林"],
+          up4: ["布伦妮", "雷泽", "菲谢尔"],
+          type: "character"
+      },
+      weapon: {
+          name: "神铸赋形",
+          up5: ["尘光七谕", "黑蚀"],
+          up4: ["织月者的曙色", "钟剑", "幽夜华尔兹", "匣里灭辰", "流浪乐章"],
+          type: "weapon",
+          fateSystem: true
+      },
+      standard: {
+          name: "奔行世间",
+          standard5: ["琴", "迪卢克", "刻晴", "莫娜", "七七", "提纳里", "迪希雅"],
+          type: "standard"
+      }
+  };
+  const COMMON_4_CHAR = ["安柏", "凯亚", "丽莎", "芭芭拉", "雷泽", "香菱", "班尼特", "诺艾尔", "菲谢尔", "砂糖", "行秋", "北斗", "凝光", "烟绯", "重云", "辛焱", "云堇", "久岐忍", "五郎", "九条裟罗", "托马", "罗莎莉亚", "早柚", "鹿野院平藏", "柯莱", "多莉", "坎蒂丝", "莱依拉", "珐露珊", "瑶瑶", "米卡", "卡维", "绮良良", "卡齐娜"];
+  const COMMON_4_WEAPON = ["弓藏", "祭礼弓", "绝弦", "西风猎弓", "匣里日月", "祭礼残章", "流浪乐章", "西风秘典", "匣里灭辰", "祭礼大剑", "雨裁", "西风大剑", "匣里龙吟", "祭礼剑", "笛剑", "西风剑", "西风长枪", "匣里灭辰"];
+  const COMMON_3 = ["弹弓", "神射手之誓", "鸦羽弓", "翡玉法球", "魔导绪论", "讨龙英杰谭", "黑缨枪", "以理服人", "铁影阔剑", "飞天御剑", "黎明神剑", "冷刃"];
+  // 核心状态管理：各池子独立保底，角色1和角色2共享保底
+  let state = {
+      currentPool: 'char1',
+      totalPulls: 0,
+      history5: [],
+      poolData: {
+          char: { pity5: 0, pity4: 0, isGuaranteed: false },
+          weapon: { pity5: 0, pity4: 0, isGuaranteed: false, fateValue: 0 },
+          standard: { pity5: 0, pity4: 0 }
+      }
+  };
+  // 获取池子底层类型(用于识别保底归属)
+  function getPoolType(poolKey) {
+      if (poolKey === 'char1' || poolKey === 'char2') return 'char';
+      return poolKey;
+  }
+  // UI 更新
+  function switchBanner(type) {
+      state.currentPool = type;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      // 兼容初始化调用和点击调用
+      if(typeof event !== 'undefined' && event.target) {
+          event.target.classList.add('active');
+      } else {
+          document.querySelector(`.tab-btn[onclick*="'${type}'"]`).classList.add('active');
+      }
+      const pool = POOLS[type];
+      const poolType = getPoolType(type);
+      document.getElementById('bannerTitle').innerText = pool.name;
+      if(poolType === 'char') {
+          document.getElementById('bannerSub').innerText = `UP角色: ${pool.up5.join(' / ')}`;
+          document.getElementById('bannerSub4').innerText = `UP四星: ${pool.up4.join(' / ')}`;
+          document.getElementById('bannerSub4').style.display = 'block';
+      } else if(poolType === 'weapon') {
+          document.getElementById('bannerSub').innerText = `UP武器: ${pool.up5.join(' / ')}`;
+          document.getElementById('bannerSub4').innerText = `UP四星: ${pool.up4.join(' / ')}`;
+          document.getElementById('bannerSub4').style.display = 'block';
+      } else {
+          document.getElementById('bannerSub').innerText = `常驻5星: 角色/武器混合`;
+          document.getElementById('bannerSub4').style.display = 'none';
+      }
+      updateStatsUI();
+  }
+  function updateStatsUI() {
+      const poolType = getPoolType(state.currentPool);
+      const pData = state.poolData[poolType];
+      document.getElementById('pity5Count').innerText = 90 - pData.pity5;
+      document.getElementById('pity4Count').innerText = 10 - pData.pity4;
+      document.getElementById('guaranteeStatus').innerText = pData.isGuaranteed ? "是" : "否";
+      document.getElementById('totalPulls').innerText = state.totalPulls;
+  }
+  // 抽卡核心逻辑
+  function getRandomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function pullOne() {
+      const poolType = getPoolType(state.currentPool);
+      const pData = state.poolData[poolType];
+      pData.pity5++;
+      pData.pity4++;
+      state.totalPulls++;
+      let star = 3;
+      const currentPity5 = pData.pity5;
+      const currentPity4 = pData.pity4;
+      let probability5 = 0.006;
+      // 软保底机制：73抽开始概率递增
+      if (currentPity5 >= 73) {
+          probability5 += (currentPity5 - 72) * 0.06;
+      }
+      if (currentPity5 >= 90) probability5 = 1; // 硬保底
+      let probability4 = 0.051;
+      if (currentPity4 >= 10) probability4 = 1; // 4星硬保底
+      const rand = Math.random();
+      if (rand <= probability5) {
+          star = 5;
+          pData.pity5 = 0;
+          pData.pity4 = 0; // 出高星重置低星保底
+      } else if (rand <= probability5 + probability4) {
+          star = 4;
+          pData.pity4 = 0;
+      }
+      return generateItem(star, currentPity5, poolType);
+  }
+  function generateItem(star, pity5Count, poolType) {
+      const pool = POOLS[state.currentPool];
+      const pData = state.poolData[poolType];
+      let name = "";
+      if (star === 5) {
+          if (poolType === 'standard') {
+              const item = getRandomItem(pool.standard5);
+              name = item;
+          } else {
+              // 判断是否歪了
+              const isUp = pData.isGuaranteed || Math.random() < 0.5;
+              if (isUp) {
+                  name = getRandomItem(pool.up5);
+                  pData.isGuaranteed = false;
+              } else {
+                  // 歪了，从常驻抽
+                  const stdPool = POOLS.standard.standard5.filter(i => !pool.up5.includes(i));
+                  name = getRandomItem(stdPool);
+                  pData.isGuaranteed = true; // 下次大保底
+              }
+              // 武器池定轨逻辑简化
+              if(poolType === 'weapon' && pool.fateSystem) {
+                  if(pool.up5.includes(name)) {
+                      pData.fateValue = 0; // 抽中重置
+                  } else {
+                      pData.fateValue++;
+                      if(pData.fateValue >= 2) { // 满命定值，直接换成UP
+                          name = getRandomItem(pool.up5);
+                          pData.fateValue = 0;
+                          pData.isGuaranteed = false;
+                      }
+                  }
+              }
+          }
+          state.history5.unshift({ name, pity: pity5Count });
+      } else if (star === 4) {
+          // 4星也拥有50%概率为UP
+          const isUp4 = Math.random() < 0.5;
+          if (isUp4 && pool.up4 && pool.up4.length > 0) {
+              name = getRandomItem(pool.up4);
+          } else {
+              // 混合常驻4星
+              const all4 = [...COMMON_4_CHAR, ...COMMON_4_WEAPON];
+              name = getRandomItem(all4);
+          }
+      } else {
+          name = getRandomItem(COMMON_3);
+      }
+      return { star, name };
+  }
+  function doWish(times) {
+      const results = [];
+      for(let i=0; i<times; i++) {
+          results.push(pullOne());
+      }
+      // 移除排序，按真实抽卡时间顺序展示，更符合游戏实况
+      showResults(results);
+      updateStatsUI();
+      renderHistory();
+  }
+  // 渲染逻辑
+  function showResults(results) {
+      const container = document.getElementById('resultsContainer');
+      container.innerHTML = '';
+      results.forEach((res, idx) => {
+          const card = document.createElement('div');
+          card.className = `result-card star-${res.star}`;
+          card.style.animationDelay = `${idx * 0.05}s`;
+          card.innerHTML = `
+              <div style="font-size:1.5rem;">${res.star===5?'✨':res.star===4?'💫':'🪨'}</div>
+              <div class="card-name">${res.name}</div>
+              <div class="card-star">${'★'.repeat(res.star)}</div>
+          `;
+          container.appendChild(card);
+      });
+      document.getElementById('resultsOverlay').style.display = 'flex';
+  }
+  function closeResults() {
+      document.getElementById('resultsOverlay').style.display = 'none';
+  }
+  function renderHistory() {
+      const list = document.getElementById('historyList');
+      if(state.history5.length === 0) {
+          list.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:10px;">暂无记录</div>';
+          return;
+      }
+      list.innerHTML = state.history5.map(h => `
+          <div class="history-item">
+              <span class="hist-star-5">${h.name}</span>
+              <span style="color:var(--text-dim);">第 ${h.pity} 抽出货</span>
+          </div>
+      `).join('');
+  }
+  // 初始化
+  switchBanner('char1');
+  
+  function goBack() {
+      window.location.href = 'index.html';
+  }
+</script>
+</body>
+</html>

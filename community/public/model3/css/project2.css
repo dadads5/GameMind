@@ -1,0 +1,236 @@
+body{
+    background-size:cover;
+    background-repeat: no-repeat;
+    background-position:0 0;
+    height: 100vh;
+    margin:0 0 0 0;
+}
+html{
+    height: 100%;
+}
+
+/* 圆形按钮样式 */
+.circle-btn {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  margin: 10px 0 10px 0;
+  background-size: cover; /* 图片覆盖整个元素（常用），可选 contain（完整显示图片） */
+  background-position: center; /* 图片居中显示 */
+  background-repeat: no-repeat; /* 禁止图片重复 */
+
+}
+
+.circle-btn:hover {
+  transform: scale(1.1);
+}
+
+.circle-btn:active {
+  transform: scale(0.95);
+}
+
+/* 按钮颜色样式 */
+.btn-primary {
+  color: rgba(255, 255, 255, 0);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.btn-accent {
+  background-color: #93C5FD;
+  color: #3B82F6;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-accent:hover {
+  background-color: #3B82F6;
+  color: white;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 按钮图标样式 */
+.btn-icon {
+  font-size: 35px;
+  color: #ffffff; 
+}
+
+.btn-zi{
+  font-size: 35px;
+  font-family: "KaiTi", "STKaiti", "Microsoft YaHei", "SimHei", sans-serif;
+  transition: transform 0.3s ease;
+  color: #ffffff; 
+  opacity: 0.8;
+}
+
+.circle-btn:hover .btn-icon {
+  transform: rotate(12deg);
+}
+
+/* 按钮徽章样式 */
+.btn-badge {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background-color: #EF4444;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+}
+
+.circle-btn:hover .btn-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 按钮文本样式 */
+.btn-text {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(1.2rem);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  color:#ffffff;
+  font-family: "KaiTi", "STKaiti", "Microsoft YaHei", "SimHei", sans-serif;
+  transition: transform 0.3s ease;
+}
+
+.circle-btn:hover .btn-text {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0.8rem);
+}
+
+
+/* 按钮网格布局 */
+.button-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  width: 100%;
+  max-width: 64rem;
+  margin-bottom: 3rem;
+}
+
+@media (min-width: 768px) {
+  .button-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .button-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.button-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.button-label {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #4B5563;
+}
+
+/* 状态按钮样式 */
+.state-container {
+  margin-top: 3rem;
+  width: 100%;
+  max-width: 48rem;
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+}
+
+.state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.state-toggle {
+  display: none;
+}
+
+.state-toggle:checked + .circle-btn {
+  background-color: #10B981;
+}
+
+.state-toggle:checked + .circle-btn .btn-icon {
+  transform: rotate(360deg);
+}
+
+.state-label {
+  display: inline-block;
+  cursor: pointer;
+}
+
+#display{
+  width:500px;
+  height:95%;
+  padding-top: 40px;
+  padding-left: 30px;
+  padding-right: 30px;
+  background-color:rgba(255, 242, 226, 0.5);
+  border-radius: 10px;
+  margin-left: 50px;
+}
+
+#textDisplay{
+
+  /* 字体设置：优先使用指定字体，没有则使用默认无衬线字体 */
+  font-family: "Microsoft YaHei", "SimHei", sans-serif;
+            
+  /* 字体大小：可以用px、em、rem等单位 */
+  font-size: 20px; /* 20像素 */
+  
+  /* 字体颜色：可以用颜色名、十六进制、rgb、rgba */
+  color: #000000; /* 十六进制颜色 */
+  /* 也可以用 rgb(51, 102, 153) 或 颜色名如 royalblue */
+  
+  /* 透明度：0-1之间，1是完全不透明，0是完全透明 */
+  opacity: 0.9; /* 90%不透明 */
+
+}
+.div0{
+    display: flex;
+    height:100vh;
+    width:100%;
+}
+#div1{
+    height:100vh;
+    width:48%;
+}
+
+
+.fa-star {
+  color: #ffffff; /* 空心星星用金色突出 */
+}
