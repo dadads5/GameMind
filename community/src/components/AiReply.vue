@@ -39,6 +39,8 @@ async function getAiReply() {
           aiReply.value = message || '获取AI回复失败，请稍后重试'
         },
       },
+      // 智能回复是一次性辅助，不写入会话，避免污染会话列表
+      { persist: false },
     )
   } catch {
     aiReply.value = '获取AI回复失败，请稍后重试'

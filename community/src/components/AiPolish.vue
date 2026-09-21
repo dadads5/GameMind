@@ -46,7 +46,10 @@ async function runPolish() {
   loading.value = true
   polished.value = ''
   try {
-    const result = await askAI(`${promptMap[mode.value]}\n\n正文：\n${raw.value}`)
+    // 润写是一次性辅助，不写入会话，避免污染会话列表
+    const result = await askAI(`${promptMap[mode.value]}\n\n正文：\n${raw.value}`, [], {
+      persist: false,
+    })
     polished.value = (result ?? '').trim()
     if (!polished.value) notifyWarning('AI 未返回内容，请重试')
   } catch (e) {

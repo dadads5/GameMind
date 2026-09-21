@@ -2,14 +2,20 @@ package com.zuel.springtest.controller;
 
 import com.zuel.springtest.common.Result;
 import com.zuel.springtest.dto.ai.AskRequest;
+import com.zuel.springtest.dto.ai.ChatMessage;
 import com.zuel.springtest.security.CurrentUser;
 import com.zuel.springtest.security.LoginUser;
+import com.zuel.springtest.entity.AiConversation;
+import com.zuel.springtest.entity.AiMessage;
+import com.zuel.springtest.services.AiConversationService;
 import com.zuel.springtest.services.DeepSeekService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -46,6 +53,7 @@ public class AiController {
 
     private final DeepSeekService deepSeekService;
     private final StringRedisTemplate stringRedis;
+    private final AiConversationService aiConversationService;
 
     /**
      * 流式请求专用线程池：固定上限 + 有界队列
@@ -99,7 +107,20 @@ public class AiController {
         if (!allowAiCall(loginUser.getId())) {
             return Result.fail("AI 调用过于频繁，请 1 分钟后再试");
         }
-        String answer = deepSeekService.ask(request.getQuestion(), request.getHistory());
+        boolean persist = shouldPersist(request);
+        Long conversationId = null;
+        List<ChatMessage> history = request.getHistory() == null ? List.of() : request.getHistory();
+        if (persist) {
+            conversationId = aiConversationService.resolve(
+                    request.getConversationId(), loginUser.getId(), request.getQuestion());
+            // 先取历史（此时本次提问尚未落库），再保存提问，避免与下方 question 在上下文中重复
+            history = resolveHistory(request, conversationId, loginUser.getId());
+            aiConversationService.saveMessage(conversationId, "user", request.getQuestion());
+        }
+        String answer = deepSeekService.ask(request.getQuestion(), history);
+        if (persist) {
+            aiConversationService.saveMessage(conversationId, "assistant", answer);
+        }
         return Result.success(answer);
     }
 
@@ -121,7 +142,28 @@ public class AiController {
             return errorEmitter("当前使用人数较多，请稍后再试");
         }
 
+        // 会话解析：未传 id 时按首条提问自动新建，并把 id 回传给前端
+        boolean persist = shouldPersist(request);
+        Long conversationId = null;
+        List<ChatMessage> history = request.getHistory() == null ? List.of() : request.getHistory();
+        if (persist) {
+            conversationId = aiConversationService.resolve(
+                    request.getConversationId(), loginUser.getId(), request.getQuestion());
+            // 先取历史（此时本次提问尚未落库），再保存提问，避免与下方 question 在上下文中重复
+            history = resolveHistory(request, conversationId, loginUser.getId());
+            aiConversationService.saveMessage(conversationId, "user", request.getQuestion());
+        }
+
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+
+        // 首个事件：把本次会话 id 告知前端，后续多轮可直接沿用
+        if (persist) {
+            try {
+                emitter.send(SseEmitter.event().name("conversation").data(String.valueOf(conversationId)));
+            } catch (IOException ignored) {
+                // 客户端已断开，后续事件自然失败，由 cleanup 统一收尾
+            }
+        }
 
         // 心跳：每 15s 发一条 SSE 注释行，防止中间代理（nginx 等）因空闲断开连接
         ScheduledFuture<?> heartbeatFuture = HEARTBEAT_EXECUTOR.scheduleAtFixedRate(() -> {
@@ -144,12 +186,19 @@ public class AiController {
         emitter.onTimeout(cleanup);
         emitter.onError(e -> cleanup.run());
 
+        // 累积完整答案，流结束（含客户端中断）后落库，保证多轮上下文不丢
+        StringBuilder answerBuffer = new StringBuilder();
+        // lambda 内部只能引用 effectively final 的变量，这里固化其最终值
+        final List<ChatMessage> finalHistory = history;
+        final Long finalConversationId = conversationId;
+        final boolean finalPersist = persist;
         CompletableFuture.runAsync(() -> {
             try {
                 deepSeekService.streamAsk(
                         request.getQuestion(),
-                        request.getHistory(),
+                        finalHistory,
                         token -> {
+                            answerBuffer.append(token);
                             try {
                                 emitter.send(SseEmitter.event().name("token").data(token));
                             } catch (Exception ignored) {
@@ -174,6 +223,10 @@ public class AiController {
                 }
                 emitter.complete();
             } finally {
+                // 客户端主动中断时也保存已生成内容，保证会话上下文完整
+                if (finalPersist && answerBuffer.length() > 0) {
+                    aiConversationService.saveMessage(finalConversationId, "assistant", answerBuffer.toString());
+                }
                 cleanup.run();
             }
         }, SSE_EXECUTOR);
@@ -201,6 +254,61 @@ public class AiController {
                 "status", "OK",
                 "aiConfigured", deepSeekService.isConfigured()
         ));
+    }
+
+    // ------------------------------------------------------------------
+    // 会话持久化
+    // ------------------------------------------------------------------
+
+    /** 当前用户的会话列表（按最近更新排序） */
+    @GetMapping("/conversations")
+    public Result<List<AiConversation>> conversations(@CurrentUser LoginUser loginUser) {
+        return Result.success(aiConversationService.listByUser(loginUser.getId()));
+    }
+
+    /** 新建空会话（通常无需调用：提问时不传 conversationId 会自动创建） */
+    @PostMapping("/conversations")
+    public Result<Map<String, Object>> createConversation(@CurrentUser LoginUser loginUser) {
+        Long id = aiConversationService.create(loginUser.getId(), null);
+        return Result.success(Map.of("conversationId", id));
+    }
+
+    /** 某会话的历史消息（带归属校验） */
+    @GetMapping("/conversations/{id}/messages")
+    public Result<List<AiMessage>> conversationMessages(@PathVariable Long id,
+                                                        @CurrentUser LoginUser loginUser) {
+        return Result.success(aiConversationService.listMessages(id, loginUser.getId()));
+    }
+
+    /** 删除会话及其消息（带归属校验） */
+    @DeleteMapping("/conversations/{id}")
+    public Result<Void> deleteConversation(@PathVariable Long id, @CurrentUser LoginUser loginUser) {
+        aiConversationService.delete(id, loginUser.getId());
+        return Result.success();
+    }
+
+    /**
+     * 是否持久化到会话：默认 true；润写 / 智能回复等一次性辅助传 false。
+     */
+    private boolean shouldPersist(AskRequest request) {
+        return request.getPersist() == null || Boolean.TRUE.equals(request.getPersist());
+    }
+
+    /**
+     * 解析本次请求使用的对话历史：请求自带 history 优先，
+     * 否则从服务端会话读取（前端因此可不再携带 20 条历史）。
+     */
+    private List<ChatMessage> resolveHistory(AskRequest request, Long conversationId, Long userId) {
+        if (request.getHistory() != null && !request.getHistory().isEmpty()) {
+            return request.getHistory();
+        }
+        List<AiMessage> stored = aiConversationService.context(conversationId, userId);
+        if (stored.isEmpty()) {
+            return List.of();
+        }
+        return stored.stream()
+                .map(m -> new ChatMessage(m.getRole(), m.getContent()))
+                .toList();
     }
 
     /**
