@@ -1,0 +1,41 @@
+[Unit]
+Description=SpringTest Backend (论坛 AI 后端)
+After=network.target
+
+[Service]
+# 生产建议新建专用用户并 chown，这里默认 root 以便直接读写 /data/uploads
+# 如需降权：User=appuser 并确保 /opt/springtest 与 /data/uploads 归属该用户
+WorkingDirectory=/opt/springtest
+ExecStart=/usr/bin/java -jar /opt/springtest/springtest-0.0.1-SNAPSHOT.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+
+# ---- 环境变量（prod）：部署前按实际情况替换占位符 ----
+Environment=SPRING_PROFILES_ACTIVE=prod
+
+# 数据库（阿里云 RDS 用内网地址，需把 ECS 内网 IP 加入白名单）
+Environment=DB_URL=jdbc:mysql://<RDS内网地址>:3306/yxy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+Environment=DB_USERNAME=your_db_user
+Environment=DB_PASSWORD=your_db_password
+
+# Redis（云 Redis 或自建，内网地址）
+Environment=REDIS_HOST=<redis内网地址>
+Environment=REDIS_PORT=6379
+Environment=REDIS_PASSWORD=your_redis_password
+
+# JWT 密钥：至少 64 字节随机串，不设则重启后登录态全失效
+Environment=JWT_SECRET=replace_with_at_least_64_byte_random_string
+
+# AI 服务 Key（真实有效，本地文件不入库）
+Environment=DEEPSEEK_API_KEY=sk-xxxxxxxx
+Environment=EMBEDDING_API_KEY=sk-xxxxxxxx
+
+# 跨域：填前端域名（逗号可分隔多个）
+Environment=APP_CORS_ALLOWED_ORIGINS=https://your-domain.com
+
+# 上传目录：挂载云盘/持久卷，避免重启丢文件
+Environment=UPLOAD_DIR=/data/uploads
+
+[Install]
+WantedBy=multi-user.target
