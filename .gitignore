@@ -16,6 +16,17 @@ dist/
 dist-ssr/
 *.local
 
+# 上传文件（头像 / 帖子图片，含用户数据，不入库）
+uploads/
+
+# 论文相关文档（未发表内容，不随公开仓库发布）
+THESIS_SUMMARY.md
+THESIS_TEST_PLAN.md
+
+# 构建产物
+*.jar
+*.war
+
 # 系统文件
 .DS_Store
 Thumbs.db

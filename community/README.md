@@ -1,42 +1,35 @@
-# Naruto
+# community（前端）
 
-This template should help get you started developing with Vue 3 in Vite.
+本目录是 **Gamemind 游戏社区平台**的前端工程，基于 Vue 3 + TypeScript + Vite 构建。
 
-## Recommended IDE Setup
+> 项目整体介绍、后端启动方式与环境配置请查看 **[根目录 README](../README.md)**。
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## 技术栈
 
-## Recommended Browser Setup
+Vue 3 · TypeScript · Vite 8 · Pinia · Vue Router · Element Plus · Tailwind CSS 4 · Axios
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## 开发
 
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
 npm install
+npm run dev        # 开发服务器 http://localhost:5173
 ```
 
-### Compile and Hot-Reload for Development
+## 构建
 
-```sh
-npm run dev
+```bash
+npm run type-check # 类型检查（vue-tsc）
+npm run build      # 构建产物输出到 dist/
+npm run preview    # 本地预览构建产物
 ```
 
-### Type-Check, Compile and Minify for Production
+## 代理说明
 
-```sh
-npm run build
-```
+`vite.config.ts` 中已配置代理，开发时无需处理跨域：
+
+| 路径 | 转发目标 |
+|---|---|
+| `/api` | `http://localhost:8080` |
+| `/uploads` | `http://localhost:8080` |
+
+环境变量示例见 `.env.example`。
