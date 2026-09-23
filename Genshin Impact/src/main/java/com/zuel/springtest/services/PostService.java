@@ -60,6 +60,7 @@ public class PostService {
     private final NotificationService notificationService;
     private final StatisticsService statisticsService;
     private final StringRedisTemplate stringRedis;
+    private final KnowledgeService knowledgeService;
 
     /** 浏览量 Redis 增量 key 前缀（值为纯数字，供 INCR 使用） */
     private static final String VIEW_DELTA_PREFIX = "post:view:delta:";
@@ -264,6 +265,7 @@ public class PostService {
         log.info("用户 {} 发布帖子：{}（id={}）", userId, post.getTitle(), post.getId());
         recalcHotScore(post.getId());
         statisticsService.evict();
+        knowledgeService.indexPost(post.getId());
         return PostVO.from(post);
     }
 
@@ -286,6 +288,7 @@ public class PostService {
         post.setContent(request.getContent());
         post.setBoardId(request.getBoardId());
         post.setImages(request.getImages());
+        knowledgeService.indexPost(id);
         return PostVO.from(post);
     }
 
@@ -305,6 +308,7 @@ public class PostService {
         if (postMapper.deleteById(id) <= 0) {
             throw new BusinessException(ResultCode.INTERNAL_ERROR, "删除帖子失败");
         }
+        knowledgeService.deleteByPostId(id);
         // 清理 Redis 残留，避免已删除的帖子继续出现在热榜
         evictPostCaches(id);
         log.info("帖子 {} 已被用户 {} 删除", id, userId);
@@ -328,6 +332,7 @@ public class PostService {
         if (postMapper.deleteById(id) <= 0) {
             throw new BusinessException(ResultCode.INTERNAL_ERROR, "删除帖子失败");
         }
+        knowledgeService.deleteByPostId(id);
         evictPostCaches(id);
         log.info("帖子 {} 已被管理员删除", id);
         statisticsService.evict();

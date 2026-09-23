@@ -50,14 +50,15 @@ public class AdminController {
     // 内容：帖子
     // ------------------------------------------------------------------
 
-    /** 帖子列表（跨社区，支持关键词搜索） */
+    /** 帖子列表（跨社区，支持关键词搜索与板块筛选） */
     @GetMapping("/posts")
     public Result<Map<String, Object>> listPosts(@CurrentUser LoginUser loginUser,
                                                  @RequestParam(required = false) String keyword,
+                                                 @RequestParam(required = false) Integer boardId,
                                                  @RequestParam(defaultValue = "1") int page,
                                                  @RequestParam(defaultValue = "20") int size) {
         adminService.assertAdmin(loginUser);
-        return Result.success(adminService.listPosts(keyword, page, size));
+        return Result.success(adminService.listPosts(keyword, boardId, page, size));
     }
 
     @PutMapping("/posts/{id}/top")
@@ -142,6 +143,16 @@ public class AdminController {
         adminService.assertAdmin(loginUser);
         adminService.updateUserVip(id, vip);
         return Result.success(vip == 1 ? "已设为 VIP" : "已取消 VIP", null);
+    }
+
+    /** 重置用户密码：管理员直接设置新密码，无需提供用户原密码 */
+    @PutMapping("/users/{id}/password")
+    public Result<Void> updateUserPassword(@PathVariable Long id,
+                                           @RequestBody Map<String, String> body,
+                                           @CurrentUser LoginUser loginUser) {
+        adminService.assertAdmin(loginUser);
+        adminService.updateUserPassword(id, body == null ? null : body.get("password"));
+        return Result.success("密码已修改", null);
     }
 
     // ------------------------------------------------------------------

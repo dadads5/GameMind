@@ -13,6 +13,7 @@ import com.zuel.springtest.security.LoginUser;
 import com.zuel.springtest.vo.AdminUserVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,7 +25,7 @@ import java.util.Map;
 /**
  * 管理员业务
  *
- * <p>覆盖：数据看板、内容（帖子/评论）管理、用户管理（启停/角色）、板块管理。
+ * <p>覆盖：数据看板、内容（帖子/评论）管理、用户管理（启停/角色/VIP/重置密码）、板块管理。
  * 所有入口都要求当前用户 role = 1（管理员）。
  */
 @Slf4j
@@ -42,6 +43,7 @@ public class AdminService {
     private final UserMapper userMapper;
     private final BoardMapper boardMapper;
     private final PostService postService;
+    private final PasswordEncoder passwordEncoder;
 
     // ------------------------------------------------------------------
     // 权限
@@ -75,12 +77,12 @@ public class AdminService {
     // 内容：帖子
     // ------------------------------------------------------------------
 
-    public Map<String, Object> listPosts(String keyword, int page, int size) {
+    public Map<String, Object> listPosts(String keyword, Integer boardId, int page, int size) {
         String kw = normalize(keyword);
         int[] range = pageRange(page, size);
         Map<String, Object> data = new HashMap<>();
-        data.put("list", postMapper.selectForAdmin(kw, range[1], range[0]));
-        data.put("total", postMapper.countForAdmin(kw));
+        data.put("list", postMapper.selectForAdmin(kw, boardId, range[1], range[0]));
+        data.put("total", postMapper.countForAdmin(kw, boardId));
         return data;
     }
 
@@ -181,6 +183,22 @@ public class AdminService {
         requireUser(userId);
         userMapper.updateVip(userId, vip);
         log.info("管理员修改用户 {} VIP 为 {}", userId, vip);
+    }
+
+    /**
+     * 重置用户密码（管理员操作，无需提供用户原密码）。
+     *
+     * <p>入参为明文新密码，长度 6-100 位，入库前统一用 BCrypt 加密，
+     * 与注册/登录保持一致，绝不落明文。
+     */
+    @Transactional
+    public void updateUserPassword(Long userId, String rawPassword) {
+        if (!StringUtils.hasText(rawPassword) || rawPassword.length() < 6 || rawPassword.length() > 100) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "密码长度需要 6-100 位");
+        }
+        requireUser(userId);
+        userMapper.updatePassword(userId, passwordEncoder.encode(rawPassword));
+        log.info("管理员重置用户 {} 的密码", userId);
     }
 
     // ------------------------------------------------------------------

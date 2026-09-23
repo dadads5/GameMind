@@ -1,17 +1,18 @@
 package com.zuel.springtest.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zuel.springtest.common.BusinessException;
 import com.zuel.springtest.common.ResultCode;
 import com.zuel.springtest.config.DeepSeekProperties;
 import com.zuel.springtest.dto.ai.ChatMessage;
+import com.zuel.springtest.dto.ai.SourceChunk;
 import com.zuel.springtest.dto.deepseek.ChatCompletionRequest;
 import com.zuel.springtest.dto.deepseek.ChatCompletionResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -24,9 +25,11 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
- * DeepSeek 对话服务
+ * DeepSeek 对话服务（含 RAG 检索增强）
  *
  * <p>配置由 {@link DeepSeekProperties} 类型安全绑定，API Key 通过环境变量注入。
+ * 每次问答前会先经 {@link KnowledgeService} 检索站内相关攻略，作为参考素材注入 prompt，
+ * 实现「基于站内真实内容回答 + 可溯源」。Embedding 未配置时自动降级为纯模型知识。
  */
 @Slf4j
 @Service
@@ -39,11 +42,13 @@ public class DeepSeekService {
             """;
 
     private final DeepSeekProperties properties;
+    private final KnowledgeService knowledgeService;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public DeepSeekService(DeepSeekProperties properties) {
+    public DeepSeekService(DeepSeekProperties properties, KnowledgeService knowledgeService) {
         this.properties = properties;
+        this.knowledgeService = knowledgeService;
         this.objectMapper = new ObjectMapper();
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -57,74 +62,43 @@ public class DeepSeekService {
         return properties.getApi() != null && StringUtils.hasText(properties.getApi().getKey());
     }
 
-    /**
-     * 提问
-     *
-     * @param question 用户问题
-     * @param history  多轮对话历史，可为 null
-     * @return AI 回答
-     */
+    // ------------------------------------------------------------------
+    // 同步问答
+    // ------------------------------------------------------------------
+
     public String ask(String question, List<ChatMessage> history) {
+        return ask(question, history, knowledgeService.retrieve(question));
+    }
+
+    public String ask(String question, List<ChatMessage> history, List<SourceChunk> sources) {
         if (!isConfigured()) {
             log.warn("DeepSeek API Key 未配置，请在环境变量 DEEPSEEK_API_KEY 中设置");
             throw new BusinessException(ResultCode.AI_SERVICE_ERROR, "AI 服务未配置，请联系管理员");
         }
-
-        DeepSeekProperties.Api api = properties.getApi();
-        DeepSeekProperties.Chat chat = properties.getChat();
-
-        List<ChatCompletionRequest.Message> messages = new ArrayList<>();
-        messages.add(new ChatCompletionRequest.Message("system", resolveSystemPrompt()));
-
-        for (ChatMessage message : limitHistory(history)) {
-            if (message == null || !StringUtils.hasText(message.getContent())) {
-                continue;
-            }
-            messages.add(new ChatCompletionRequest.Message(message.getRole(), message.getContent()));
-        }
-        messages.add(new ChatCompletionRequest.Message("user", question));
-
-        ChatCompletionRequest request = new ChatCompletionRequest();
-        request.setModel(api.getModel());
-        request.setMessages(messages);
-        request.setTemperature(chat.getTemperature());
-        // 适当压低上限，避免模型无意义地 long generating，整体更快结束
-        request.setMaxTokens(Math.min(chat.getMaxTokens(), 800));
-        request.setStream(false);
-
+        ChatCompletionRequest request = buildRequest(question, history, sources, false);
         try {
             String requestBody = objectMapper.writeValueAsString(request);
-            log.debug("调用 DeepSeek，问题长度：{}，历史 {} 条", question.length(),
-                    history == null ? 0 : history.size());
-
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(api.getUrl()))
+                    .uri(URI.create(properties.getApi().getUrl()))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + api.getKey())
+                    .header("Authorization", "Bearer " + properties.getApi().getKey())
                     .timeout(Duration.ofSeconds(60))
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
-
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-
             if (response.statusCode() != 200) {
                 log.error("DeepSeek 返回错误，状态码：{}，响应：{}", response.statusCode(), response.body());
                 throw new BusinessException(ResultCode.AI_SERVICE_ERROR, "AI 服务暂时不可用，请稍后重试");
             }
-
-            ChatCompletionResponse completion =
-                    objectMapper.readValue(response.body(), ChatCompletionResponse.class);
-
+            ChatCompletionResponse completion = objectMapper.readValue(response.body(), ChatCompletionResponse.class);
             if (completion.getChoices() == null || completion.getChoices().isEmpty()
                     || completion.getChoices().get(0).getMessage() == null) {
                 log.error("DeepSeek 响应格式异常：{}", response.body());
                 throw new BusinessException(ResultCode.AI_SERVICE_ERROR, "AI 返回内容为空，请重试");
             }
-
             String answer = completion.getChoices().get(0).getMessage().getContent();
             log.debug("DeepSeek 回答长度：{} 字符", answer == null ? 0 : answer.length());
             return answer;
-
         } catch (BusinessException e) {
             throw e;
         } catch (IOException e) {
@@ -140,51 +114,28 @@ public class DeepSeekService {
         }
     }
 
-    /**
-     * 流式提问（SSE）
-     *
-     * <p>逐段把模型输出通过 {@code onToken} 回调吐出，结束时回调 {@code onComplete}。
-     * 解析 DeepSeek 返回的 SSE：每行形如 {@code data: {...}}，结束行为 {@code data: [DONE]}，
-     * 内容片段位于 {@code choices[0].delta.content}。
-     *
-     * @param question  用户问题
-     * @param history   多轮对话历史
-     * @param onToken   每拿到一段文本时的回调
-     * @param onComplete 整段输出结束后的回调
-     */
+    // ------------------------------------------------------------------
+    // 流式问答（SSE）
+    // ------------------------------------------------------------------
+
     public void streamAsk(String question, List<ChatMessage> history,
                            Consumer<String> onToken, Runnable onComplete) {
+        streamAsk(question, history, knowledgeService.retrieve(question), onToken, onComplete);
+    }
+
+    public void streamAsk(String question, List<ChatMessage> history, List<SourceChunk> sources,
+                          Consumer<String> onToken, Runnable onComplete) {
         if (!isConfigured()) {
             log.warn("DeepSeek API Key 未配置，请在环境变量 DEEPSEEK_API_KEY 中设置");
             throw new BusinessException(ResultCode.AI_SERVICE_ERROR, "AI 服务未配置，请联系管理员");
         }
-
-        DeepSeekProperties.Api api = properties.getApi();
-        DeepSeekProperties.Chat chat = properties.getChat();
-
-        List<ChatCompletionRequest.Message> messages = new ArrayList<>();
-        messages.add(new ChatCompletionRequest.Message("system", resolveSystemPrompt()));
-        for (ChatMessage message : limitHistory(history)) {
-            if (message == null || !StringUtils.hasText(message.getContent())) {
-                continue;
-            }
-            messages.add(new ChatCompletionRequest.Message(message.getRole(), message.getContent()));
-        }
-        messages.add(new ChatCompletionRequest.Message("user", question));
-
-        ChatCompletionRequest request = new ChatCompletionRequest();
-        request.setModel(api.getModel());
-        request.setMessages(messages);
-        request.setTemperature(chat.getTemperature());
-        request.setMaxTokens(Math.min(chat.getMaxTokens(), 800));
-        request.setStream(true);
-
+        ChatCompletionRequest request = buildRequest(question, history, sources, true);
         try {
             String requestBody = objectMapper.writeValueAsString(request);
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(api.getUrl()))
+                    .uri(URI.create(properties.getApi().getUrl()))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + api.getKey())
+                    .header("Authorization", "Bearer " + properties.getApi().getKey())
                     .timeout(Duration.ofSeconds(120))
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
@@ -194,7 +145,6 @@ public class DeepSeekService {
                     httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofLines());
 
             if (response.statusCode() != 200) {
-                // 读取少量内容用于报错提示
                 StringBuilder err = new StringBuilder();
                 response.body().limit(5).forEach(err::append);
                 log.error("DeepSeek 流式返回错误，状态码：{}，响应：{}", response.statusCode(), err);
@@ -247,10 +197,67 @@ public class DeepSeekService {
         }
     }
 
+    // ------------------------------------------------------------------
+    // 共用：组装请求（含 RAG 上下文注入）
+    // ------------------------------------------------------------------
+
+    private ChatCompletionRequest buildRequest(String question, List<ChatMessage> history,
+                                               List<SourceChunk> sources, boolean stream) {
+        DeepSeekProperties.Api api = properties.getApi();
+        DeepSeekProperties.Chat chat = properties.getChat();
+        List<ChatCompletionRequest.Message> messages = buildMessages(question, history, sources);
+        ChatCompletionRequest request = new ChatCompletionRequest();
+        request.setModel(api.getModel());
+        request.setMessages(messages);
+        request.setTemperature(chat.getTemperature());
+        // 适当压低上限，避免模型无意义地 long generating，整体更快结束
+        request.setMaxTokens(Math.min(chat.getMaxTokens(), 800));
+        request.setStream(stream);
+        return request;
+    }
+
+    private List<ChatCompletionRequest.Message> buildMessages(String question, List<ChatMessage> history,
+                                                              List<SourceChunk> sources) {
+        List<ChatCompletionRequest.Message> messages = new ArrayList<>();
+        messages.add(new ChatCompletionRequest.Message("system", resolveSystemPrompt()));
+        if (sources != null && !sources.isEmpty()) {
+            messages.add(new ChatCompletionRequest.Message("system", buildRagInstruction(sources)));
+        }
+        for (ChatMessage message : limitHistory(history)) {
+            if (message == null || !StringUtils.hasText(message.getContent())) {
+                continue;
+            }
+            messages.add(new ChatCompletionRequest.Message(message.getRole(), message.getContent()));
+        }
+        messages.add(new ChatCompletionRequest.Message("user", question));
+        return messages;
+    }
+
+    /**
+     * 将检索到的站内攻略拼装成 system 级参考约束：要求模型优先依据素材、文末标注来源、不足时如实说明。
+     */
+    private String buildRagInstruction(List<SourceChunk> sources) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("以下是来自本站内的相关游戏攻略素材（已按相关度排序）。请遵循以下要求：\n");
+        sb.append("1. 优先依据这些素材回答用户问题，保证信息准确、有出处；\n");
+        sb.append("2. 若素材不足以回答，请如实说明「未找到相关站内攻略」，不要编造；\n");
+        sb.append("3. 回答结尾用「来源：<帖子标题>」标注引用了哪些素材（可多个）；\n");
+        sb.append("4. 不要输出「根据资料显示」等无意义前缀，直接作答。\n\n");
+        for (int i = 0; i < sources.size(); i++) {
+            SourceChunk s = sources.get(i);
+            sb.append("【素材 ").append(i + 1).append("】标题：")
+                    .append(s.getTitle() == null ? "" : s.getTitle()).append("\n");
+            String content = s.getContent() == null ? "" : s.getContent();
+            if (content.length() > 600) {
+                content = content.substring(0, 600);
+            }
+            sb.append(content).append("\n\n");
+        }
+        return sb.toString();
+    }
+
     /**
      * 截断多轮对话历史，避免把整段长对话都发给模型导致首字延迟（TTFB）随聊天变长而变慢。
-     *
-     * <p>只保留最近 {@code MAX_HISTORY} 条有效消息；为空或不足则原样返回。
      */
     private List<ChatMessage> limitHistory(List<ChatMessage> history) {
         if (history == null || history.isEmpty()) {

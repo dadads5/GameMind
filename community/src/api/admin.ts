@@ -75,8 +75,8 @@ export const adminApi = {
     return res.success && res.data ? res.data : {}
   },
 
-  async listPosts(keyword = '', page = 1, size = 20): Promise<AdminPage<AdminPostItem>> {
-    const res = await request.get<AdminPage<AdminPostItem>>('/admin/posts', { params: { keyword, page, size } })
+  async listPosts(keyword = '', page = 1, size = 20, boardId?: number | null): Promise<AdminPage<AdminPostItem>> {
+    const res = await request.get<AdminPage<AdminPostItem>>('/admin/posts', { params: { keyword, page, size, boardId } })
     return res.success && res.data ? res.data : { list: [], total: 0 }
   },
 
@@ -104,6 +104,10 @@ export const adminApi = {
 
   updateUserVip: (id: number, vip: number) =>
     request.put(`/admin/users/${id}/vip`, null, { params: { vip } }),
+
+  /** 重置指定用户的密码（管理员操作，无需原密码） */
+  updateUserPassword: (id: number, password: string) =>
+    request.put(`/admin/users/${id}/password`, { password }),
 
   async listBoards(): Promise<BoardItem[]> {
     const res = await request.get<BoardItem[]>('/admin/boards')

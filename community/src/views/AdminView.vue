@@ -7,8 +7,9 @@ import {
   type AdminCommentItem,
   type AdminUserItem,
   type AdminCommunityItem,
+  type BoardItem,
 } from '../api/admin'
-import { notifyError, notifySuccess, notifyConfirm } from '../utils/notify'
+import { notifyError, notifySuccess, notifyConfirm, notifyPrompt } from '../utils/notify'
 
 const router = useRouter()
 const activeTab = ref('dashboard')
@@ -21,6 +22,15 @@ const posts = ref<AdminPostItem[]>([])
 const comments = ref<AdminCommentItem[]>([])
 const users = ref<AdminUserItem[]>([])
 const communities = ref<AdminCommunityItem[]>([])
+
+// 分页状态：内容 / 评论 / 用户列表共用（同一时刻只展示其一）
+const page = ref(1)
+const pageSize = ref(20)
+const total = ref(0)
+
+// 内容管理：板块筛选
+const boards = ref<BoardItem[]>([])
+const selectedBoardId = ref<number | undefined>(undefined)
 
 // 社区表单（新增 / 编辑共用）
 const communityForm = ref<Partial<AdminCommunityItem>>({ name: '', icon: '', description: '', sort: 0 })
@@ -46,18 +56,26 @@ const loadDashboard = async () => {
   dashboard.value = await adminApi.dashboard()
 }
 
+/** 板块列表：用于内容管理的板块筛选下拉 */
+const loadBoards = async () => {
+  boards.value = await adminApi.listBoards()
+}
+
 const loadCurrent = async () => {
   isLoading.value = true
   try {
     if (activeTab.value === 'posts') {
-      const data = await adminApi.listPosts(keyword.value.trim())
+      const data = await adminApi.listPosts(keyword.value.trim(), page.value, pageSize.value, selectedBoardId.value)
       posts.value = data.list
+      total.value = data.total
     } else if (activeTab.value === 'comments') {
-      const data = await adminApi.listComments(keyword.value.trim())
+      const data = await adminApi.listComments(keyword.value.trim(), page.value, pageSize.value)
       comments.value = data.list
+      total.value = data.total
     } else if (activeTab.value === 'users') {
-      const data = await adminApi.listUsers(keyword.value.trim())
+      const data = await adminApi.listUsers(keyword.value.trim(), page.value, pageSize.value)
       users.value = data.list
+      total.value = data.total
     } else if (activeTab.value === 'communities') {
       const allCommunities = await adminApi.listAdminCommunities()
     communities.value = allCommunities.filter((c) => (c.id ?? 0) > 4)
@@ -72,14 +90,43 @@ const loadCurrent = async () => {
 const switchTab = (key: string) => {
   activeTab.value = key
   keyword.value = ''
+  page.value = 1
+  if (key === 'posts') selectedBoardId.value = undefined
   loadCurrent()
 }
 
-const onSearch = () => loadCurrent()
+const onSearch = () => {
+  page.value = 1
+  loadCurrent()
+}
+
+const onPageChange = (p: number) => {
+  page.value = p
+  loadCurrent()
+}
+
+const onSizeChange = (s: number) => {
+  pageSize.value = s
+  page.value = 1
+  loadCurrent()
+}
+
+/** 删除后重新加载；若当前页已空且不在第一页，则回退一页 */
+const reloadAfterDelete = async () => {
+  await loadCurrent()
+  const len = activeTab.value === 'posts' ? posts.value.length
+    : activeTab.value === 'comments' ? comments.value.length
+      : users.value.length
+  if (len === 0 && page.value > 1) {
+    page.value -= 1
+    await loadCurrent()
+  }
+}
 
 onMounted(async () => {
   try {
     await loadDashboard()
+    await loadBoards()
     await loadCurrent()
   } catch (e) {
     handleError(e)
@@ -109,7 +156,7 @@ const deletePost = async (p: AdminPostItem) => {
   if (!await notifyConfirm(`确定删除帖子「${p.title}」？该帖下的评论也会一并删除，且不可恢复。`)) return
   try {
     await adminApi.deletePost(p.id)
-    posts.value = posts.value.filter((x) => x.id !== p.id)
+    await reloadAfterDelete()
     notifySuccess('已删除')
   } catch (e) {
     handleError(e)
@@ -122,7 +169,7 @@ const deleteComment = async (c: AdminCommentItem) => {
   if (!await notifyConfirm('确定删除这条评论？')) return
   try {
     await adminApi.deleteComment(c.id)
-    comments.value = comments.value.filter((x) => x.id !== c.id)
+    await reloadAfterDelete()
     notifySuccess('已删除')
   } catch (e) {
     handleError(e)
@@ -163,6 +210,25 @@ const toggleUserVip = async (u: AdminUserItem) => {
   }
 }
 
+/** 管理员重置指定用户的密码（无需原密码，后端 BCrypt 加密入库） */
+const changeUserPassword = async (u: AdminUserItem) => {
+  const name = u.nickname || u.username
+  const password = await notifyPrompt(`为用户「${name}」设置新密码，长度 6-100 位`, '修改密码', {
+    inputType: 'password',
+    placeholder: '请输入新密码',
+    inputValidator: (v: string) =>
+      !v ? '请输入新密码' : v.length < 6 || v.length > 100 ? '密码长度需要 6-100 位' : true,
+    inputErrorMessage: '密码长度需要 6-100 位',
+  })
+  if (!password) return
+  try {
+    await adminApi.updateUserPassword(u.id, password)
+    notifySuccess(`已修改「${name}」的密码`)
+  } catch (e) {
+    handleError(e)
+  }
+}
+
 // ---------- 游戏社区操作 ----------
 const resetCommunityForm = () => {
   editingCommunityId.value = null
@@ -183,7 +249,7 @@ const submitCommunity = async () => {
       notifySuccess('已保存')
     } else {
       await adminApi.createCommunity(communityForm.value)
-      notifySuccess('游戏社区已创建（已自动生成「综合讨论」板块）')
+      notifySuccess(`游戏社区已创建（已自动生成「${communityForm.value.name}」板块）`)
     }
     resetCommunityForm()
     const allCommunities = await adminApi.listAdminCommunities()
@@ -251,6 +317,22 @@ const deleteCommunity = async (c: AdminCommunityItem) => {
 
           <!-- 内容 / 评论 / 用户：搜索框 -->
           <div v-if="['posts', 'comments', 'users'].includes(activeTab)" class="flex gap-2 mb-4">
+            <el-select
+              v-if="activeTab === 'posts'"
+              v-model="selectedBoardId"
+              clearable
+              placeholder="全部板块"
+              style="width: 160px"
+              class="flex-shrink-0"
+              @change="onSearch"
+            >
+              <el-option
+                v-for="b in boards"
+                :key="b.id"
+                :label="b.name"
+                :value="b.id!"
+              />
+            </el-select>
             <input
               v-model="keyword"
               @keyup.enter="onSearch"
@@ -326,6 +408,9 @@ const deleteCommunity = async (c: AdminCommunityItem) => {
                 <div class="text-xs text-gray-500 mt-1">{{ u.email }} · 注册于 {{ u.createdAt }}</div>
               </div>
               <div class="flex gap-2 flex-shrink-0">
+                <button @click="changeUserPassword(u)" class="px-3 py-1 rounded-lg text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/60">
+                  改密码
+                </button>
                 <RouterLink :to="`/user/${u.id}`" class="px-3 py-1 rounded-lg text-xs bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60">
                   主页
                 </RouterLink>
@@ -370,7 +455,7 @@ const deleteCommunity = async (c: AdminCommunityItem) => {
               </div>
             </div>
 
-            <div class="text-xs text-gray-500">新增的社区为「纯论坛」形态，自动生成「综合讨论」板块，首页「游戏社区」区可直达，点击进入统一论坛模板。</div>
+            <div class="text-xs text-gray-500">新增的社区为「纯论坛」形态，自动生成一个与社区同名的板块，首页「游戏社区」区可直达，点击进入统一论坛模板。</div>
 
             <!-- 列表 -->
             <div class="space-y-2">
@@ -387,6 +472,23 @@ const deleteCommunity = async (c: AdminCommunityItem) => {
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- 分页：内容 / 评论 / 用户列表共用 -->
+          <div
+            v-if="['posts', 'comments', 'users'].includes(activeTab) && total > 0"
+            class="flex justify-center mt-6"
+          >
+            <el-pagination
+              background
+              layout="prev, pager, next, total, sizes"
+              :total="total"
+              :current-page="page"
+              :page-size="pageSize"
+              :page-sizes="[10, 20, 50]"
+              @current-change="onPageChange"
+              @size-change="onSizeChange"
+            />
           </div>
         </div>
       </template>

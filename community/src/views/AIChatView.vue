@@ -12,11 +12,20 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 const router = useRouter()
 
+interface SourceRef {
+  postId: number
+  title: string
+  /** 帖子所属社区 ID，用于跳转到 /community/:communityId/post/:id */
+  communityId?: number | null
+}
+
 interface Message {
   id: number
   role: 'user' | 'assistant'
   content: string
   timestamp: string
+  /** RAG 检索到的来源片段，用于「可溯源」展示 */
+  sources?: SourceRef[]
 }
 
 const WELCOME =
@@ -145,6 +154,7 @@ const sendMessage = async () => {
     role: 'assistant',
     content: '',
     timestamp: now(),
+    sources: [],
   }
   messages.value.push(aiMessage)
 
@@ -166,6 +176,10 @@ const sendMessage = async () => {
             conversationId.value = id
             loadConversations()
           }
+        },
+        onSources: (list) => {
+          // RAG 检索到的站内攻略来源，随答案一起展示，可点击跳转原文
+          aiMessage.sources = list
         },
         onError: (message) => {
           if (!aiMessage.content) {
@@ -198,10 +212,10 @@ const sendMessage = async () => {
 }
 
 const quickQuestions = [
-  '鸣人最厉害的忍术是什么？',
-  '如何在论坛发帖？',
-  '佐助的写轮眼有几种形态？',
-  '怎么修改个人资料？',
+  '原神新手该怎么快速入门？',
+  '纳塔的火神瞳怎么全收集？',
+  '火影忍者的忍术结印有哪些？',
+  '王者峡谷有哪些冷门但强势的英雄？',
 ]
 
 const askQuickQuestion = (question: string) => {
@@ -317,6 +331,22 @@ onMounted(() => {
                     v-if="isLoading && message.role === 'assistant' && message.content"
                     class="inline-block w-2 h-4 ml-0.5 align-middle bg-indigo-500 animate-pulse"
                   ></span></p>
+
+                  <!-- RAG 来源展示：点击跳转原文，实现「可溯源」 -->
+                  <div
+                    v-if="message.role === 'assistant' && message.sources && message.sources.length"
+                    class="mt-2 pt-2 border-t border-indigo-100 dark:border-indigo-800 space-y-1"
+                  >
+                    <p class="text-xs text-gray-400 dark:text-gray-500">📚 参考来源：</p>
+                    <router-link
+                      v-for="src in message.sources"
+                      :key="src.postId"
+                      :to="src.communityId ? `/community/${src.communityId}/post/${src.postId}` : `/forum/post/${src.postId}`"
+                      class="block text-xs text-indigo-500 hover:text-indigo-700 hover:underline"
+                    >
+                      · {{ src.title || ('帖子 #' + src.postId) }}
+                    </router-link>
+                  </div>
                 </div>
                 <p class="text-xs text-gray-400 dark:text-gray-500" :class="message.role === 'user' ? 'text-right' : ''">
                   {{ message.timestamp }}

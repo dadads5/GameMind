@@ -14,6 +14,8 @@ export interface StreamCallbacks {
   onError?: (message: string) => void
   /** 服务端分配的会话 id（首个事件），前端据此沿用同一会话 */
   onConversation?: (id: number) => void
+  /** RAG 检索到的来源片段（sources 事件），用于「可溯源」展示 */
+  onSources?: (sources: { postId: number; title: string }[]) => void
 }
 
 /** 流式请求可选参数 */
@@ -143,6 +145,18 @@ export const streamAI = async (
     if (eventName === 'conversation') {
       const id = Number(data)
       if (!Number.isNaN(id)) callbacks.onConversation?.(id)
+      eventName = ''
+      return
+    }
+
+    // RAG 来源片段
+    if (eventName === 'sources') {
+      try {
+        const parsed = JSON.parse(data)
+        if (Array.isArray(parsed)) callbacks.onSources?.(parsed)
+      } catch {
+        // 忽略来源解析失败
+      }
       eventName = ''
       return
     }

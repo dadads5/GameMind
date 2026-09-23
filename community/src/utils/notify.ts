@@ -22,3 +22,29 @@ export const notifyConfirm = async (message: string, title = '确认操作'): Pr
     return false
   }
 }
+
+/**
+ * 输入框对话框：用于需要用户填写单个值的场景（如管理员重置密码）。
+ * 用户取消或关闭时返回 null。
+ */
+export const notifyPrompt = async (
+  message: string,
+  title = '请输入',
+  options: {
+    placeholder?: string
+    inputType?: string
+    inputValidator?: (value: string) => boolean | string
+    inputErrorMessage?: string
+  } = {},
+): Promise<string | null> => {
+  try {
+    const { value } = await ElMessageBox.prompt(message, title, {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      ...options,
+    })
+    return value ?? null
+  } catch {
+    return null
+  }
+}

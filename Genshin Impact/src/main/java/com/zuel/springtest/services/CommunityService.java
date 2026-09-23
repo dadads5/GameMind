@@ -39,7 +39,7 @@ public class CommunityService {
 
     /**
      * 新增游戏社区（论坛型）：自动分配安全 id（>=5，避开原 4 个内置社区），
-     * 并创建一个默认板块「综合讨论」，保证新建社区可立即发帖。
+     * 并创建一个与社区同名的默认板块，保证新建社区可立即发帖。
      */
     @Transactional
     public CommunityVO createCommunity(Community community) {
@@ -54,9 +54,9 @@ public class CommunityService {
         Board board = new Board();
         board.setId(boardMapper.selectMaxId() + 1);
         board.setCommunityId(nextId);
-        board.setName("综合讨论");
+        board.setName(community.getName());
         board.setIcon(community.getIcon());
-        board.setDescription("综合讨论区");
+        board.setDescription(hasText(community.getDescription()) ? community.getDescription() : community.getName());
         board.setSort(0);
         boardMapper.insert(board);
 

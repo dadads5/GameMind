@@ -5,10 +5,13 @@ import com.zuel.springtest.dto.ai.AskRequest;
 import com.zuel.springtest.dto.ai.ChatMessage;
 import com.zuel.springtest.security.CurrentUser;
 import com.zuel.springtest.security.LoginUser;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.zuel.springtest.dto.ai.SourceChunk;
 import com.zuel.springtest.entity.AiConversation;
 import com.zuel.springtest.entity.AiMessage;
 import com.zuel.springtest.services.AiConversationService;
 import com.zuel.springtest.services.DeepSeekService;
+import com.zuel.springtest.services.KnowledgeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +57,9 @@ public class AiController {
     private final DeepSeekService deepSeekService;
     private final StringRedisTemplate stringRedis;
     private final AiConversationService aiConversationService;
+    private final KnowledgeService knowledgeService;
+
+    private static final ObjectMapper OBJ_MAPPER = new ObjectMapper();
 
     /**
      * 流式请求专用线程池：固定上限 + 有界队列
@@ -146,6 +152,8 @@ public class AiController {
         boolean persist = shouldPersist(request);
         Long conversationId = null;
         List<ChatMessage> history = request.getHistory() == null ? List.of() : request.getHistory();
+        // RAG 检索：先查出与问题最相关的站内攻略，作为参考素材并随答案回传前端溯源
+        List<SourceChunk> sources = knowledgeService.retrieve(request.getQuestion());
         if (persist) {
             conversationId = aiConversationService.resolve(
                     request.getConversationId(), loginUser.getId(), request.getQuestion());
@@ -162,6 +170,25 @@ public class AiController {
                 emitter.send(SseEmitter.event().name("conversation").data(String.valueOf(conversationId)));
             } catch (IOException ignored) {
                 // 客户端已断开，后续事件自然失败，由 cleanup 统一收尾
+            }
+        }
+
+        // RAG 来源事件：检索到的站内攻略，供前端「可溯源」展示（失败不影响主回答）
+        if (!sources.isEmpty()) {
+            try {
+                String srcJson = OBJ_MAPPER.writeValueAsString(
+                        sources.stream()
+                                .map(s -> {
+                                    java.util.Map<String, Object> m = new java.util.HashMap<>();
+                                    m.put("postId", s.getPostId());
+                                    m.put("title", s.getTitle() == null ? "" : s.getTitle());
+                                    m.put("communityId", s.getCommunityId());
+                                    return m;
+                                })
+                                .toList());
+                emitter.send(SseEmitter.event().name("sources").data(srcJson));
+            } catch (IOException ignored) {
+                // 来源展示失败不影响主回答
             }
         }
 
@@ -190,6 +217,7 @@ public class AiController {
         StringBuilder answerBuffer = new StringBuilder();
         // lambda 内部只能引用 effectively final 的变量，这里固化其最终值
         final List<ChatMessage> finalHistory = history;
+        final List<SourceChunk> finalSources = sources;
         final Long finalConversationId = conversationId;
         final boolean finalPersist = persist;
         CompletableFuture.runAsync(() -> {
@@ -197,6 +225,7 @@ public class AiController {
                 deepSeekService.streamAsk(
                         request.getQuestion(),
                         finalHistory,
+                        finalSources,
                         token -> {
                             answerBuffer.append(token);
                             try {

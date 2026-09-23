@@ -193,24 +193,31 @@ public interface PostMapper {
             "  <if test='keyword != null and keyword.trim() != &quot;&quot;'>" +
             "    AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content LIKE CONCAT('%', #{keyword}, '%')) " +
             "  </if>" +
+            "  <if test='boardId != null'>" +
+            "    AND p.board_id = #{boardId} " +
+            "  </if>" +
             "</where>" +
             "ORDER BY p.is_top DESC, p.created_at DESC " +
             "LIMIT #{limit} OFFSET #{offset}" +
             "</script>")
     List<Post> selectForAdmin(@Param("keyword") String keyword,
+                              @Param("boardId") Integer boardId,
                               @Param("limit") int limit,
                               @Param("offset") int offset);
 
-    /** 管理端帖子总数（支持关键词） */
+    /** 管理端帖子总数（支持关键词与板块） */
     @Select("<script>" +
             "SELECT COUNT(*) FROM post p " +
             "<where>" +
             "  <if test='keyword != null and keyword.trim() != &quot;&quot;'>" +
             "    AND (p.title LIKE CONCAT('%', #{keyword}, '%') OR p.content LIKE CONCAT('%', #{keyword}, '%')) " +
             "  </if>" +
+            "  <if test='boardId != null'>" +
+            "    AND p.board_id = #{boardId} " +
+            "  </if>" +
             "</where>" +
             "</script>")
-    int countForAdmin(@Param("keyword") String keyword);
+    int countForAdmin(@Param("keyword") String keyword, @Param("boardId") Integer boardId);
 
     @Update("UPDATE post SET is_top = #{isTop} WHERE id = #{id}")
     int updateTop(@Param("id") Long id, @Param("isTop") int isTop);
