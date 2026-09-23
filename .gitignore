@@ -30,3 +30,6 @@ THESIS_TEST_PLAN.md
 # 系统文件
 .DS_Store
 Thumbs.db
+
+# 数据库脚本（含本地数据 / 初始化 SQL，不入库）
+allsql/
