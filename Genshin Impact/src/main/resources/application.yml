@@ -3,15 +3,15 @@ spring:
     name: springtest
 
   # ------------------------------------------------------------------
-  # 本地开发配置
+  # Profile 配置
   # 敏感项（数据库密码、AI Key 等）请写入 application-local.yml，
-  # 该文件已被 .gitignore 忽略，不会随仓库提交。
-  # 加载方式：启动时激活 local profile
-  #   命令行：mvn spring-boot:run -Dspring-boot.run.profiles=local
-  #   IDE：Run Configuration → Active profiles 填 local
-  # 若希望 mvn 启动时自动加载本地配置，取消下面两行注释即可：
+  # 该文件已被 .gitignore 忽略，不会随仓库提交（注意也别打进生产包）。
+  # 默认激活 local（本地免配置）；部署时用环境变量覆盖为 prod：
+  #   容器/命令行：SPRING_PROFILES_ACTIVE=prod
+  #   IDE：Run Configuration → Active profiles 填 local / prod
+  #   mvn：mvn spring-boot:run -Dspring-boot.run.profiles=local
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   # ------------------------------------------------------------------
 
   datasource:
