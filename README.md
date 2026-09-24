@@ -188,6 +188,37 @@ npm run dev
 
 ---
 
+## 🚀 新增技术与优化
+
+> 本节汇总项目在初版论坛之上，后续迭代引入的新能力与工程优化，便于评审 / 面试快速抓取亮点。
+
+### 1. AI 能力体系（三层场景化 + 会话持久化）
+- **三层 AI 能力**：智能问答（多轮上下文 + SSE 流式，打字机效果）、AI 润写（智能润色 / 更简洁 / 更专业 / 更生动 / 纠错 5 模式，原文对照一键替换）、AI 智能回复（按标题 + 正文流式生成可参考回复）。
+- **会话持久化**：新增 `ai_conversation` / `ai_message` 两张表，对话落库，刷新 / 换设备可续聊；润写、智能回复传 `persist=false` 不污染会话列表。
+- **体验优化**：`AbortSignal` + 「■ 停止」按钮随时中断并保留已生成内容；Enter 发送 / Shift+Enter 换行 + 输入框高度自适应；消息持有对象引用 + `requestAnimationFrame` 节流滚动，消除每 token 的 O(n) 查找与高频 DOM 更新。
+
+### 2. 性能与稳定性优化
+- **SSE 并发治理**：流式专用有界线程池（核心 4 / 最大 16 / 队列 64，替代早期无界缓存线程池）+ 并发信号量上限 32（超限直接拒绝）+ 全局共享心跳调度器（每 15s 发注释行防中间代理断开）+ 单连接 5 分钟超时兜底 + `AtomicBoolean` 保证清理幂等。
+- **Redis 异步在线刷新**：在线时间戳刷新放入独立线程池（核心 1 / 最大 2 / 队列 + `DiscardPolicy`）异步执行，Redis 抖动时宁可少统计一次也不阻塞业务请求。
+- **限流与降级**：每用户每分钟 10 次 AI 调用（Redis 计数）；DeepSeek 未配置 / 超时 / 空响应分级降级，错误明细仅留服务端、前端收脱敏文案。
+- **统计与缓存**：总览 Redis 缓存 60s 且写入失败回退 DB；在线人数走独立轻量端点（Redis ZSet + 5 分钟滑动窗口）不复用总览缓存；浏览量走 Redis 增量、每 5 分钟批量落库；热榜定时原子重建。
+
+### 3. 检索增强生成（RAG）✅ 已实现
+- **向量化**：`EmbeddingService` 对接硅基流动 SiliconFlow（OpenAI 兼容），默认 `BAAI/bge-m3`（1024 维检索专用），Key 经环境变量 `EMBEDDING_API_KEY` 注入，换厂商覆盖 `EMBEDDING_API_URL` 即可。
+- **索引构建**：`KnowledgeService` 将帖子切片向量化存入 `PostChunk`（MySQL，embedding 以逗号分隔浮点串），启动自动建索引 + 每 30 分钟定时重建 + 发帖时增量 `indexPost`。
+- **检索召回**：查询向量与全量切片做余弦相似度 Top-K 召回（相似度阈值 0.20），命中片段作为参考素材注入 prompt，实现「基于站内真实内容回答 + 可溯源」。
+- **优雅降级**：`EmbeddingService` 未配置时自动跳过 RAG，问答降级为纯模型知识，不影响主流程。
+- **工具调用智能体（Function Calling / AgentService）**：规划中，方案见 `AGENT_UPGRADE_PLAN.md`（站内搜索 / 角色查询等工具 + Agent 循环），尚未落地。
+
+### 4. 生产部署（单机上线）
+- **整体架构**：云服务器 ECS（Ubuntu 22.04，2 核 4GB）+ Nginx 反向代理（`/api`、`/uploads` 转发 `127.0.0.1:8080`，前端 `dist` 静态托管）+ Spring Boot 可执行 jar 单机部署。
+- **进程守护**：后端由 systemd 服务 `springtest` 托管，全部密钥经环境变量注入，开机自启 + 失败自动重启；JVM 内存 `-Xmx1g` 适配 4GB 规格。
+- **数据库 / 缓存**：MySQL 8 与 Redis 6 同机部署，收紧 `innodb_buffer_pool_size=512M` 避免与 JVM 抢内存；Redis 启用 `requirepass`。
+- **HTTPS**：Let's Encrypt 免费证书（certbot webroot 模式签发），Nginx 80→443 重定向，证书 90 天有效期并通过 `renew_hook` 自动 reload Nginx 完成续期。
+- **备份策略**：crontab 每日 03:00 `mysqldump` 备份业务库至 `/data/backups`（保留 7 天）；用户上传文件落地 `/data/uploads` 并与 jar 分离，重启不丢。
+
+---
+
 ## 📄 文档
 
 | 文档 | 说明 |

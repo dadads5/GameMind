@@ -43,6 +43,7 @@
 | Validation | 参数校验 | `@Valid` 前置防御 |
 | Lombok | 样板代码 | 减少 getter/setter/Builder 冗余 |
 | HttpClient + SSE | AI 调用 | 串/流式调用 DeepSeek，流式用 `SseEmitter` 推送 |
+| RAG 检索增强（`EmbeddingService` + `KnowledgeService`） | 站内攻略检索 | 硅基流动 bge-m3 向量化帖子切片，余弦相似度 Top-K 召回注入 prompt，可溯源，未配置自动降级 |
 
 **关键取舍**：认证用「JWT 拦截器」而非 Spring Security 全量过滤器链，是因为纯前后端分离 SPA + 轻量鉴权，自建拦截器更轻、对白名单（`AntPathMatcher`）控制更直接；密码用 BCrypt 而非明文/MD5，是安全底线。
 
@@ -140,6 +141,14 @@ Service 层（事务边界、业务规则）
 ### 6.4 AI 能力设计小结
 三层能力对应三类用户意图：**有问题问 AI（问答）**、**不会写让 AI 改（润写）**、**想回但不懂让 AI 起头（智能回复）**，均围绕「降低 UGC 生产门槛、提升社区活跃」这一目标。后端统一限流 + 并发保护 + 异常降级，保证 AI 特性不会成为系统稳定性短板。
 
+### 6.5 RAG 检索增强（已实现）
+在三层 AI 能力之上引入检索增强生成，让回答「基于站内真实内容、可溯源」：
+- **向量化**：`EmbeddingService` 对接硅基流动 SiliconFlow（OpenAI 兼容），默认 `BAAI/bge-m3`（1024 维），Key 经 `EMBEDDING_API_KEY` 注入。
+- **索引**：`KnowledgeService` 将帖子切片向量化存入 `PostChunk`（MySQL，embedding 以逗号分隔浮点串），启动自动建索引 + 每 30 分钟定时重建 + 发帖时增量 `indexPost`。
+- **召回**：查询向量与全量切片做余弦相似度 Top-K 召回（阈值 0.20），命中片段作为参考素材注入 prompt。
+- **降级**：`EmbeddingService` 未配置时自动跳过 RAG，问答降级为纯模型知识，不影响主流程。
+- 工具调用智能体（Function Calling / AgentService）仍规划中，方案见 `AGENT_UPGRADE_PLAN.md`。
+
 ---
 
 ## 7. 关键技术难点与解决方案（面试可展开）
@@ -169,6 +178,7 @@ Service 层（事务边界、业务规则）
 - **AI 特色**：基于 DeepSeek 构建三层 AI 能力——①多轮流式智能问答（SSE + 原生 fetch 逐 token 渲染）；②发帖页 AI 润写（智能润色/简洁/专业/生动/纠错 5 模式，原文对照一键替换）；③帖子详情页 AI 智能回复（按标题+正文流式生成可参考回复）。后端做有界线程池 + 信号量并发上限(32) + 全局心跳 + 限流(每用户 10 次/分) + 异常降级，保障稳定性。
 - 前端 Vue3 + TS + Pinia + Element Plus + Tailwind 实现 SPA，封装统一消息/确认组件与路由登录守卫；后端 Spring Boot + MyBatis，RESTful 接口 70+。
 - 用 Redis ZSet + 5 分钟滑动窗口实现实时在线统计，独立线程池异步刷新避免 Redis 抖动阻塞主流程；统计总览 Redis 缓存 60s，在线人数独立轻量端点降 DB 压力。
+- 引入 RAG 检索增强：硅基流动 bge-m3 向量化站内帖子、余弦相似度 Top-K 召回注入 prompt，让 AI 回答基于站内真实内容且可溯源；独立负责阿里云 ECS 单机部署上线（Nginx 反代 + Let's Encrypt HTTPS + 每日自动备份）。
 - 设计活跃度积分驱动的用户等级（Lv1–Lv10）与自动徽章体系，前后端共用计算逻辑；JWT + BCrypt 实现无状态认证与单设备登录；修复多页面数据加载竞态保障数据准确。
 
 **技能关键词**：Vue3 · TypeScript · Vite · Pinia · Element Plus · Tailwind · Spring Boot · MyBatis · MySQL · Redis · JWT · BCrypt · SSE 流式 · DeepSeek API · 大模型应用 · RESTful · 高并发缓存设计 · 前后端分离

@@ -1,7 +1,9 @@
 # 智能体（Agent）改造设计方案
 
 > 目标：把现有「LLM 直接调用 + Prompt 工程」升级为**名副其实的社区领域智能体**，使其具备工具调用、检索增强与记忆能力，同时提升论文创新点分量。
-> 现状：见 `THESIS_SUMMARY.md` §6.5；当前 `DeepSeekService` 仅做「system prompt + history + question → Chat Completions」，无工具调用、无规划、无长期记忆。
+> 现状：见 `THESIS_SUMMARY.md` §6.5。当前 `DeepSeekService` 已接入 **RAG 检索增强**（`KnowledgeService` + `EmbeddingService`：硅基流动 bge-m3 向量化站内帖子、余弦相似度 Top-K 召回注入 prompt、未配置自动降级）；**工具调用智能体（Function Calling / AgentService）仍未落地**，见下文方案 A。
+>
+> **实施状态（2026-09-24）**：方案 B（RAG 检索增强）✅ 已实现；方案 A（工具调用智能体）⏳ 规划中；方案 C（完整自治 Agent）📋 仅作论文展望。
 
 ---
 
@@ -10,7 +12,7 @@
 | 能力维度 | 现状 | 目标（智能体） | 改造动作 |
 |---|---|---|---|
 | 工具调用 | ❌ 无 | ✅ 可查站内帖子/角色数据 | 注册工具 + Function Calling 循环 |
-| 检索增强 RAG | ❌ 无 | ✅ 检索站内攻略再生成 | 文档切片 + 向量/全文检索 |
+| 检索增强 RAG | ✅ 已实现（`KnowledgeService` + `EmbeddingService`，硅基流动 bge-m3 向量化 + 余弦相似度 Top-K 召回，embedding 存 MySQL `PostChunk`） | ✅ 检索站内攻略再生成 | 文档切片 + 向量检索（MySQL 存储） |
 | 记忆 | ⚠️ 前端临时 history（≤20 条，服务端不存） | ✅ 会话持久化 | 新增会话与消息表 |
 | 多步推理 | ❌ 单轮 | ✅ 思考—调用—观察循环 | Agent 循环（上限 N 步） |
 | 流式输出 | ✅ token 流 | ✅ 增加工具调用状态事件 | SSE 事件扩展 |
